@@ -1,0 +1,1962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#DC2626">
+  <meta name="description" content="BloodConnect — Instant Blood Emergency Network connecting patients with nearby compatible donors in real-time.">
+  <title>BloodConnect — Instant Blood Emergency Network</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans for modern healthcare UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Web Application Main Shell -->
+  <div class="web-app-container" id="appViewportContainer">
+    <div class="web-app-frame" id="mobileDeviceFrame">
+      
+      <!-- Modern Web Application Header Bar -->
+      <header class="app-header" id="appHeader">
+        <div class="header-left">
+          <button class="header-icon-btn back-btn" id="headerBackBtn" onclick="handleNavigationBack()" style="display: none;" aria-label="Go back">
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+          <div class="brand-container" id="headerBrand" onclick="navigateToScreen(appState.activeRole === 'donor' ? 'screen-home-donor' : 'screen-home-requester')" style="cursor: pointer;">
+            <div class="brand-logo-mini">
+              <i class="fa-solid fa-droplet pulse-icon"></i>
+            </div>
+            <div class="brand-text">
+              <span class="brand-title">Blood<span class="brand-highlight">Connect</span></span>
+              <span class="brand-subtitle" id="headerRoleBadge">Emergency Network</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Desktop Web Navigation Links -->
+        <nav class="web-nav-links" id="webNavLinks">
+          <button class="web-nav-link active" id="navLinkHome" onclick="navigateToScreen(appState.activeRole === 'donor' ? 'screen-home-donor' : 'screen-home-requester')">
+            <i class="fa-solid fa-house"></i> <span>Dashboard</span>
+          </button>
+          <button class="web-nav-link nav-cta-highlight" id="navLinkRequest" onclick="handleRequestBloodNav()">
+            <i class="fa-solid fa-hand-holding-droplet"></i> <span>Request Blood</span>
+          </button>
+          <button class="web-nav-link" id="navLinkNearby" onclick="showNearbyRequestsModal()">
+            <i class="fa-solid fa-map-location-dot"></i> <span>Nearby Alerts</span>
+          </button>
+          <button class="web-nav-link" id="navLinkHistory" onclick="navigateToScreen('screen-my-requests')">
+            <i class="fa-solid fa-clipboard-list"></i> <span>My Requests</span>
+          </button>
+        </nav>
+
+        <div class="header-right">
+          <!-- Active Emergency Mesh Live Pill -->
+          <div class="web-mesh-indicator">
+            <span class="pulse-beacon"></span>
+            <span>38 Donors Online</span>
+          </div>
+
+          <!-- Role quick-toggle pill -->
+          <button class="role-switch-pill" id="headerRoleSwitchBtn" onclick="toggleUserRole()" title="Switch between Requester and Donor views">
+            <span class="role-pill-dot"></span>
+            <span class="role-pill-text" id="rolePillText">Requester</span>
+          </button>
+
+          <!-- Notification Bell -->
+          <button class="header-icon-btn" id="headerNotificationBtn" onclick="showNotificationCenter()" aria-label="Emergency Alerts" title="Notification Center">
+            <i class="fa-regular fa-bell"></i>
+            <span class="badge-dot" id="headerAlertBadge"></span>
+          </button>
+
+          <!-- User Profile Dropdown Menu -->
+          <div class="user-profile-menu-container" id="userProfileMenuContainer">
+            <button class="header-profile-btn" id="headerProfileBtn" onclick="toggleProfileDropdown(event)" title="Account Menu">
+              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Profile" class="header-avatar-img" id="headerAvatarImg" onerror="this.src='https://ui-avatars.com/api/?name=User&background=dc2626&color=fff'">
+            </button>
+            <div class="user-dropdown-popover" id="userDropdownPopover">
+              <div class="user-dropdown-header">
+                <div class="user-dropdown-name" id="dropdownUserName">My Account</div>
+                <div class="user-dropdown-role" id="dropdownUserRole">Blood Donor</div>
+                <div class="user-dropdown-city" id="dropdownUserCity">Location Not Set</div>
+              </div>
+              <div class="user-dropdown-divider"></div>
+              <button class="dropdown-item" onclick="switchActiveRoleAndNavigate()">
+                <i class="fa-solid fa-arrows-rotate text-primary"></i>
+                <span id="dropdownSwitchRoleText">Switch Mode</span>
+              </button>
+              <button class="dropdown-item" onclick="navigateToScreen('screen-profile'); closeProfileDropdown();">
+                <i class="fa-solid fa-user-pen"></i>
+                <span>Profile & Preferences</span>
+              </button>
+              <button class="dropdown-item" onclick="openCompatibilityModal(); closeProfileDropdown();">
+                <i class="fa-solid fa-vial text-rose"></i>
+                <span>Blood Compatibility Matrix</span>
+              </button>
+              <div class="user-dropdown-divider"></div>
+              <button class="dropdown-item text-danger" onclick="handleLogout(); closeProfileDropdown();">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Scrollable App Content Container -->
+      <main class="app-main-content" id="appMainContent">
+
+        <!-- ==============================================
+             SCREEN 1: SPLASH SCREEN (Optional intro)
+             ============================================== -->
+        <section class="screen-view" id="screen-splash">
+          <div class="splash-wrapper">
+            <div class="splash-glow"></div>
+            
+            <div class="splash-icon-wrapper">
+              <div class="splash-radar-pulse"></div>
+              <div class="splash-radar-pulse pulse-delay-1"></div>
+              <div class="splash-radar-pulse pulse-delay-2"></div>
+              <div class="splash-logo">
+                <i class="fa-solid fa-droplet"></i>
+                <div class="cross-badge">
+                  <i class="fa-solid fa-plus"></i>
+                </div>
+              </div>
+            </div>
+
+            <div class="splash-typography">
+              <h1 class="splash-title">Blood<span class="text-white">Connect</span></h1>
+              <div class="splash-tagline-badge">Instant Blood Emergency Network</div>
+              <p class="splash-desc">Connecting people. Saving time. Helping lives.</p>
+            </div>
+
+            <div class="splash-loading-indicator">
+              <div class="pulse-bar-loader">
+                <span class="bar bar-1"></span>
+                <span class="bar bar-2"></span>
+                <span class="bar bar-3"></span>
+                <span class="bar bar-4"></span>
+              </div>
+              <span class="splash-loading-text">Initializing Emergency Mesh...</span>
+            </div>
+
+            <button class="splash-skip-btn" onclick="navigateToScreen('screen-login')">
+              Enter Portal <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </section>
+
+        <!-- ==============================================
+             SCREEN 2: LOGIN SCREEN / ROLE SELECTION
+             ============================================== -->
+        <section class="screen-view active" id="screen-login">
+          <div class="auth-screen-inner">
+            <div class="auth-header">
+              <div class="auth-logo-badge">
+                <i class="fa-solid fa-droplet"></i>
+              </div>
+              <h2 class="auth-title">BloodConnect Portal</h2>
+              <p class="auth-subtitle">Sign in with your registered phone number or email</p>
+            </div>
+
+            <!-- Primary Auth Choice: Login vs Sign Up Switcher -->
+            <div class="auth-mode-switch">
+              <button type="button" class="auth-mode-btn active" id="authModeLoginBtn" onclick="switchAuthMode('login')">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i> Login
+              </button>
+              <button type="button" class="auth-mode-btn" id="authModeSignupBtn" onclick="switchAuthMode('signup')">
+                <i class="fa-solid fa-user-plus"></i> Sign Up
+              </button>
+            </div>
+
+            <!-- Unified Login Form for Both Donors & Requesters -->
+            <form class="auth-form" id="loginForm" onsubmit="handleLoginSubmit(event)">
+              <div class="form-group">
+                <label class="form-label" for="loginEmail" id="loginEmailLabel">Phone Number or Email</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-user-shield input-icon"></i>
+                  <input type="text" id="loginEmail" class="form-input" placeholder="e.g. 98401 23456 or name@gmail.com" required value="" autocomplete="username">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="loginPassword">Password</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-lock input-icon"></i>
+                  <input type="password" id="loginPassword" class="form-input" placeholder="Enter your password" required value="" autocomplete="current-password">
+                  <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('loginPassword', this)" aria-label="Toggle password visibility" title="Show/Hide Password">
+                    <i class="fa-regular fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="auth-options">
+                <label class="checkbox-container">
+                  <input type="checkbox" checked id="rememberMe">
+                  <span class="checkmark"></span>
+                  Keep me signed in
+                </label>
+                <a href="javascript:void(0)" class="auth-link" onclick="showToast('Password reset link sent to registered contact', 'info')">Forgot Password?</a>
+              </div>
+
+              <button type="submit" class="btn-primary btn-block" id="btnSignInSubmit">
+                <span id="btnSignInText">Sign In to BloodConnect</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </form>
+
+            <div class="auth-footer">
+              <p>New to BloodConnect? <a href="javascript:void(0)" class="auth-link-bold" onclick="switchAuthMode('signup')">Create New Account (Sign Up)</a></p>
+            </div>
+
+            <div class="safety-micro-disclaimer">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span>Official 24/7 Voluntary Blood Emergency Mesh • Anna Nagar, Chennai Zone</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==============================================
+             SCREEN 3: SIGN UP AS DONOR
+             ============================================== -->
+        <section class="screen-view" id="screen-signup">
+          <div class="auth-screen-inner">
+            <div class="auth-header">
+              <div class="auth-logo-badge">
+                <i class="fa-solid fa-hand-holding-droplet"></i>
+              </div>
+              <h2 class="auth-title">Create Donor Account</h2>
+              <p class="auth-subtitle">All members join as registered blood donors. You can request blood or switch to Requester Mode anytime.</p>
+            </div>
+
+            <!-- Primary Auth Choice: Login vs Sign Up Switcher -->
+            <div class="auth-mode-switch">
+              <button type="button" class="auth-mode-btn" id="signupTabLoginBtn" onclick="switchAuthMode('login')">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i> Login
+              </button>
+              <button type="button" class="auth-mode-btn active" id="signupTabSignupBtn" onclick="switchAuthMode('signup')">
+                <i class="fa-solid fa-user-plus"></i> Sign Up
+              </button>
+            </div>
+
+            <!-- Dynamic Form: Register as Donor -->
+            <form class="auth-form" id="signupForm" onsubmit="handleSignupSubmit(event)">
+              <!-- Full Name -->
+              <div class="form-group">
+                <label class="form-label" for="signupName">Full Name <span class="text-danger">*</span></label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-user input-icon"></i>
+                  <input type="text" id="signupName" class="form-input" placeholder="e.g. Ananya Roy" required autocomplete="name">
+                </div>
+              </div>
+
+              <!-- Age & Mobile Number in 2-Column Row -->
+              <div class="form-row-2col">
+                <div class="form-group">
+                  <label class="form-label" for="signupAge">Age <span class="text-danger">*</span></label>
+                  <div class="input-with-icon">
+                    <i class="fa-solid fa-calendar-days input-icon"></i>
+                    <input type="number" id="signupAge" class="form-input" placeholder="e.g. 24" min="18" max="75" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="signupPhone">Mobile Number <span class="text-danger">*</span></label>
+                  <div class="input-with-icon">
+                    <i class="fa-solid fa-phone input-icon"></i>
+                    <input type="tel" id="signupPhone" class="form-input" placeholder="e.g. 98765 43210" required autocomplete="tel">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Email ID -->
+              <div class="form-group">
+                <label class="form-label" for="signupEmail">Email ID <span class="text-danger">*</span></label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-envelope input-icon"></i>
+                  <input type="email" id="signupEmail" class="form-input" placeholder="e.g. ananya@gmail.com" required autocomplete="email">
+                </div>
+              </div>
+
+              <!-- Residential Address / City -->
+              <div class="form-group">
+                <label class="form-label" for="signupAddress">Residential Address / City <span class="text-danger">*</span></label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-location-dot input-icon"></i>
+                  <input type="text" id="signupAddress" class="form-input" placeholder="e.g. 14, 2nd Avenue, Anna Nagar, Chennai" required autocomplete="street-address">
+                </div>
+              </div>
+
+              <!-- Donor Blood Group Selection -->
+              <div class="form-group">
+                <label class="form-label">Donor Blood Group <span class="text-danger">*</span></label>
+                <div class="blood-group-grid" id="signupBloodGroupGrid">
+                  <button type="button" class="blood-chip" data-group="A+" onclick="selectSignupBloodGroup('A+')">A+</button>
+                  <button type="button" class="blood-chip" data-group="A-" onclick="selectSignupBloodGroup('A-')">A-</button>
+                  <button type="button" class="blood-chip" data-group="B+" onclick="selectSignupBloodGroup('B+')">B+</button>
+                  <button type="button" class="blood-chip" data-group="B-" onclick="selectSignupBloodGroup('B-')">B-</button>
+                  <button type="button" class="blood-chip" data-group="AB+" onclick="selectSignupBloodGroup('AB+')">AB+</button>
+                  <button type="button" class="blood-chip" data-group="AB-" onclick="selectSignupBloodGroup('AB-')">AB-</button>
+                  <button type="button" class="blood-chip active" data-group="O+" onclick="selectSignupBloodGroup('O+')">O+</button>
+                  <button type="button" class="blood-chip" data-group="O-" onclick="selectSignupBloodGroup('O-')">O-</button>
+                </div>
+                <input type="hidden" id="signupBloodGroup" value="O+">
+              </div>
+
+              <!-- Emergency Opt-In Toggle Card -->
+              <div class="toggle-card emergency-optin-card">
+                <div class="toggle-card-icon">
+                  <i class="fa-solid fa-bell"></i>
+                </div>
+                <div class="toggle-card-text">
+                  <strong>Emergency Requests Opt-In</strong>
+                  <p>Allow BloodConnect to alert me when patients nearby are in urgent need of blood.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="signupEmergencyOptIn" checked>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+
+              <!-- Password with Hide/Unhide Toggle -->
+              <div class="form-group">
+                <label class="form-label" for="signupPassword">Password <span class="text-danger">*</span></label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-lock input-icon"></i>
+                  <input type="password" id="signupPassword" class="form-input" placeholder="Create password (min 6 characters)" minlength="6" required oninput="validateSignupPasswords()" autocomplete="new-password">
+                  <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('signupPassword', this)" aria-label="Toggle password visibility" title="Show/Hide Password">
+                    <i class="fa-regular fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Confirmation Password with Hide/Unhide Toggle -->
+              <div class="form-group">
+                <label class="form-label" for="signupConfirmPassword">Confirmation Password <span class="text-danger">*</span></label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-shield-halved input-icon"></i>
+                  <input type="password" id="signupConfirmPassword" class="form-input" placeholder="Re-enter password to confirm" minlength="6" required oninput="validateSignupPasswords()" autocomplete="new-password">
+                  <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('signupConfirmPassword', this)" aria-label="Toggle confirmation password visibility" title="Show/Hide Confirmation Password">
+                    <i class="fa-regular fa-eye"></i>
+                  </button>
+                </div>
+                <div id="passwordMatchStatus" class="password-match-hint"></div>
+              </div>
+
+              <button type="submit" class="btn-primary btn-block" id="btnSignupSubmit">
+                <span>Register as Donor & Continue</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </form>
+
+            <div class="auth-footer">
+              <p>Already have an account? <a href="javascript:void(0)" class="auth-link-bold" onclick="switchAuthMode('login')">Login</a></p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==============================================
+             SCREEN 4: HOME DASHBOARD (REQUESTER)
+             ============================================== -->
+        <section class="screen-view" id="screen-home-requester">
+          <div class="dashboard-wrapper">
+            
+            <!-- User Welcome Bar -->
+            <div class="user-greeting-card">
+              <div class="greeting-avatar">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="User avatar" class="avatar-img" onerror="this.src='https://ui-avatars.com/api/?name=User&background=dc2626&color=fff'">
+                <span class="online-indicator"></span>
+              </div>
+              <div class="greeting-text">
+                <div class="greeting-subtitle">Welcome 👋</div>
+                <div class="greeting-title" id="requesterNameDisplay">My Account</div>
+              </div>
+              <div class="blood-type-badge" onclick="openCompatibilityModal()" style="cursor: pointer;" title="Tap to check blood compatibility guide">
+                <span class="badge-label">Active Need</span>
+                <span class="badge-value" id="userActiveGroupBadge">O+</span>
+              </div>
+            </div>
+
+            <!-- Web Dashboard Multi-Column Grid -->
+            <div class="web-dashboard-columns">
+              
+              <!-- Left / Main Column -->
+              <div class="web-main-col">
+                <!-- Return to Donor Mode Banner -->
+                <div class="donor-switch-banner">
+                  <div class="banner-content">
+                    <div class="banner-badge"><i class="fa-solid fa-heart-pulse"></i> Registered Donor Mode</div>
+                    <h4>Want to donate blood or view incoming emergency alerts?</h4>
+                    <p>Switch back to Donor Mode anytime to monitor incoming requests and help save lives.</p>
+                  </div>
+                  <button type="button" class="btn-switch-donor" onclick="switchActiveRoleAndNavigate()">
+                    <i class="fa-solid fa-hand-holding-droplet"></i> Switch to Donor Mode
+                  </button>
+                </div>
+
+                <!-- PROMINENT EMERGENCY HERO CARD -->
+                <div class="emergency-hero-card">
+                  <div class="emergency-pulse-glow"></div>
+                  <div class="hero-top-row">
+                    <div class="hero-badge">
+                      <span class="live-dot pulse"></span>
+                      <span>RAPID DISPATCH READY</span>
+                    </div>
+                    <div class="hero-distance-tag">
+                      <i class="fa-solid fa-location-arrow"></i> 5 km Radius Active
+                    </div>
+                  </div>
+
+                  <div class="hero-content">
+                    <h2 class="hero-title">
+                      <i class="fa-solid fa-triangle-exclamation text-primary"></i>
+                      Need Blood Urgently?
+                    </h2>
+                    <p class="hero-desc">
+                      Broadcast an instantaneous emergency alert to verified nearby compatible donors who have opted into real-time emergency dispatch.
+                    </p>
+                  </div>
+
+                  <!-- Quick Network Stats Strip -->
+                  <div class="hero-stats-strip">
+                    <div class="hero-stat-item">
+                      <strong class="text-white">38</strong>
+                      <span>Donors Online</span>
+                    </div>
+                    <div class="hero-stat-divider"></div>
+                    <div class="hero-stat-item">
+                      <strong class="text-white">~7 min</strong>
+                      <span>Avg. Match</span>
+                    </div>
+                    <div class="hero-stat-divider"></div>
+                    <div class="hero-stat-item">
+                      <strong class="text-white">Verified</strong>
+                      <span>Hospital Desk</span>
+                    </div>
+                  </div>
+
+                  <button class="hero-cta-btn" onclick="handleRequestBloodNav()">
+                    <span class="btn-beacon"></span>
+                    <i class="fa-solid fa-droplet"></i>
+                    <span>REQUEST BLOOD NOW</span>
+                    <i class="fa-solid fa-arrow-right arrow-icon"></i>
+                  </button>
+                </div>
+
+                <!-- ACTIVE REQUESTS SECTION -->
+                <div class="section-container">
+                  <div class="section-header">
+                    <div class="header-left-title">
+                      <h3 class="section-title">Active Requests</h3>
+                      <span class="counter-pill" id="activeRequestCount">1 Active</span>
+                    </div>
+                    <a href="javascript:void(0)" class="view-all-link" onclick="navigateToScreen('screen-my-requests')">View All</a>
+                  </div>
+
+                  <div class="requests-list" id="requesterActiveList">
+                    <div class="request-card emergency-border">
+                      <div class="req-card-header">
+                        <div class="blood-req-badge">
+                          <span class="blood-group">O+</span>
+                          <span class="req-label">Required</span>
+                        </div>
+                        <div class="req-urgency-tag emergency">
+                          <span class="pulse-dot"></span> Emergency
+                        </div>
+                      </div>
+
+                      <div class="req-hospital-info">
+                        <div class="hospital-name">
+                          <i class="fa-solid fa-hospital"></i> Apollo Speciality Hospital
+                        </div>
+                        <div class="hospital-sub">
+                          <span><i class="fa-solid fa-location-dot"></i> 2.8 km away</span>
+                          <span>•</span>
+                          <span><i class="fa-solid fa-clock"></i> 5 mins ago</span>
+                        </div>
+                      </div>
+
+                      <div class="req-status-tracker">
+                        <div class="status-tracker-label">
+                          <span>Status:</span>
+                          <strong class="text-orange" id="cardStatusText"><i class="fa-solid fa-spinner fa-spin"></i> Searching for donors</strong>
+                        </div>
+                        <div class="progress-bar-container">
+                          <div class="progress-bar-fill progress-animated" style="width: 45%;"></div>
+                        </div>
+                      </div>
+
+                      <div class="req-card-actions">
+                        <button class="btn-secondary-sm" onclick="navigateToEmergencyLive('req-001')">
+                          <i class="fa-solid fa-satellite-dish"></i> View Live Tracking
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right / Side Column -->
+              <div class="web-side-col">
+                <!-- Donors Nearby Live Metric Card -->
+                <div class="network-summary-card" style="flex-direction: column; gap: 16px; align-items: stretch;">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <strong style="font-size: 0.9rem; color: var(--text-main);"><i class="fa-solid fa-tower-broadcast text-primary"></i> Live Mesh Status</strong>
+                    <span class="counter-pill-alert" style="background: #DCFCE7; color: #16A34A; border-color: #BBF7D0;">Active</span>
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="metric-box">
+                      <div class="metric-number text-primary">38</div>
+                      <div class="metric-desc">Donors in Radius</div>
+                    </div>
+                    <div class="metric-box">
+                      <div class="metric-number text-orange">~7 min</div>
+                      <div class="metric-desc">Avg. Response</div>
+                    </div>
+                  </div>
+                  <button class="btn-secondary-block" onclick="showNearbyRequestsModal()" style="font-size: 0.8rem;">
+                    <i class="fa-solid fa-map-location-dot"></i> Open Live Radar Map
+                  </button>
+                </div>
+
+                <!-- BLOOD COMPATIBILITY & SAFETY CARD -->
+                <div class="safety-banner-card" style="flex-direction: column; gap: 12px;">
+                  <div style="display: flex; gap: 12px; align-items: flex-start;">
+                    <div class="safety-banner-icon">
+                      <i class="fa-solid fa-notes-medical"></i>
+                    </div>
+                    <div class="safety-banner-content">
+                      <strong style="font-size: 0.88rem;">Compatibility Matrix</strong>
+                      <p style="font-size: 0.78rem; line-height: 1.45; margin-top: 4px;">Instant clinical rules for RBC cross-matching. Check donor eligibility before hospital transfer.</p>
+                    </div>
+                  </div>
+                  <button class="btn-secondary-sm" onclick="openCompatibilityModal()" style="width: 100%; justify-content: center;">
+                    <i class="fa-solid fa-vial"></i> Open Compatibility Guide
+                  </button>
+                </div>
+
+                <!-- 24/7 Verified Emergency Helpline Card -->
+                <div class="hospital-contact-card" style="background: #FFFFFF;">
+                  <div class="contact-header">
+                    <strong style="font-size: 0.88rem;"><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> 24/7 Emergency WhatsApp Desk</strong>
+                    <span style="font-size: 0.72rem; color: var(--text-muted);">Direct instant chat with blood coordinators</span>
+                  </div>
+                  <div class="contact-details" style="margin-top: 12px;">
+                    <div class="detail-item" style="display: flex; justify-content: space-between; align-items: center;">
+                      <span><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> BloodConnect Desk:</span>
+                      <button class="btn-whatsapp-sm" onclick="openWhatsAppChat('919840123456', 'Hello BloodConnect Support, I urgently need emergency blood assistance.')" style="padding: 4px 10px; font-size: 0.72rem;">
+                        <i class="fa-brands fa-whatsapp"></i> Chat Now
+                      </button>
+                    </div>
+                    <div class="detail-item" style="display: flex; justify-content: space-between; align-items: center;">
+                      <span><i class="fa-solid fa-ambulance text-primary"></i> State Ambulance:</span>
+                      <strong class="text-primary">108</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ==============================================
+             SCREEN 5: CREATE BLOOD REQUEST
+             ============================================== -->
+        <section class="screen-view" id="screen-create-request">
+          <div class="create-request-wrapper">
+            <div class="screen-title-bar">
+              <h2 class="page-title">Request Blood</h2>
+              <p class="page-subtitle">Every second matters. Fill accurate patient details.</p>
+            </div>
+
+            <form id="createRequestForm" onsubmit="handleRequestFormSubmit(event)">
+              <div class="create-request-grid">
+                
+                <!-- Left Column: Steps 1 & 3 (Blood Group & Urgency) -->
+                <div class="web-main-col">
+                  <!-- Blood Group Selection -->
+                  <div class="form-section-card">
+                    <div class="form-section-header">
+                      <span class="step-num">1</span>
+                      <label class="form-section-label">Select Required Blood Group *</label>
+                    </div>
+                    <div class="blood-selection-grid" id="reqBloodGroupGrid">
+                      <button type="button" class="blood-select-btn" data-group="A+" onclick="selectReqBloodGroup('A+')">A+</button>
+                      <button type="button" class="blood-select-btn" data-group="A-" onclick="selectReqBloodGroup('A-')">A-</button>
+                      <button type="button" class="blood-select-btn" data-group="B+" onclick="selectReqBloodGroup('B+')">B+</button>
+                      <button type="button" class="blood-select-btn" data-group="B-" onclick="selectReqBloodGroup('B-')">B-</button>
+                      <button type="button" class="blood-select-btn" data-group="AB+" onclick="selectReqBloodGroup('AB+')">AB+</button>
+                      <button type="button" class="blood-select-btn" data-group="AB-" onclick="selectReqBloodGroup('AB-')">AB-</button>
+                      <button type="button" class="blood-select-btn active" data-group="O+" onclick="selectReqBloodGroup('O+')">O+</button>
+                      <button type="button" class="blood-select-btn" data-group="O-" onclick="selectReqBloodGroup('O-')">O-</button>
+                    </div>
+                    <input type="hidden" id="reqBloodGroupInput" value="O+">
+                    <div class="compatible-note" id="compatibleNoteText">
+                      <i class="fa-solid fa-circle-info"></i> O+ patients can receive O+, O- blood.
+                    </div>
+                  </div>
+
+                  <!-- Urgency Level Selection -->
+                  <div class="form-section-card">
+                    <div class="form-section-header">
+                      <span class="step-num">2</span>
+                      <label class="form-section-label">Urgency Level *</label>
+                    </div>
+
+                    <div class="urgency-selector-grid">
+                      <div class="urgency-card" id="urgencyNormal" onclick="selectUrgency('Normal')">
+                        <div class="urgency-icon normal"><i class="fa-solid fa-circle"></i></div>
+                        <div class="urgency-title">Normal</div>
+                        <div class="urgency-desc">Needed in 24-48 hrs</div>
+                      </div>
+
+                      <div class="urgency-card" id="urgencyUrgent" onclick="selectUrgency('Urgent')">
+                        <div class="urgency-icon urgent"><i class="fa-solid fa-circle-exclamation"></i></div>
+                        <div class="urgency-title">Urgent</div>
+                        <div class="urgency-desc">Needed in 6-12 hrs</div>
+                      </div>
+
+                      <div class="urgency-card active-emergency" id="urgencyEmergency" onclick="selectUrgency('Emergency')">
+                        <div class="emergency-flare"></div>
+                        <div class="urgency-icon emergency"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="urgency-title">Emergency</div>
+                        <div class="urgency-desc">IMMEDIATE (ICU/OT)</div>
+                      </div>
+                    </div>
+                    <input type="hidden" id="reqUrgencyInput" value="Emergency">
+                  </div>
+                </div>
+
+                <!-- Right Column: Steps 3 & 4 (Hospital, Details & Submit) -->
+                <div class="web-side-col">
+                  <!-- Hospital & Location -->
+                  <div class="form-section-card">
+                    <div class="form-section-header">
+                      <span class="step-num">3</span>
+                      <label class="form-section-label">Hospital & Location *</label>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="field-sublabel" for="reqHospitalInput">Hospital Name *</label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-hospital input-icon"></i>
+                        <input type="text" id="reqHospitalInput" class="form-input" placeholder="e.g. Apollo Hospital, Kauvery Hospital, City General" required value="">
+                      </div>
+                    </div>
+
+                    <!-- Hospital Quick Shortcuts -->
+                    <div class="hospital-shortcuts">
+                      <span class="shortcuts-tag">Quick select:</span>
+                      <button type="button" class="chip-sm" onclick="setHospitalShortcut('Apollo Speciality Hospital', 'Greams Road, Chennai (2.8 km away)')">Apollo Hospital</button>
+                      <button type="button" class="chip-sm" onclick="setHospitalShortcut('Kauvery Hospital', 'Alwarpet, Chennai (3.5 km away)')">Kauvery Hospital</button>
+                      <button type="button" class="chip-sm" onclick="setHospitalShortcut('Fortis Malar Hospital', 'Adyar, Chennai (4.2 km away)')">Fortis Malar</button>
+                      <button type="button" class="chip-sm" onclick="setHospitalShortcut('City General Hospital', 'Kilpauk, Chennai (3.0 km away)')">City General</button>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 12px;">
+                      <label class="field-sublabel" for="reqLocationInput">Hospital Location & Area</label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-location-dot input-icon text-primary"></i>
+                        <input type="text" id="reqLocationInput" class="form-input" placeholder="e.g. Anna Nagar, 2.8 km away" required value="Anna Nagar, Chennai (2.8 km away)">
+                        <button type="button" class="gps-btn" onclick="detectCurrentLocation()" title="Use Current Location">
+                          <i class="fa-solid fa-crosshairs"></i> GPS
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Additional Details: Units, Date, Contact, Notes -->
+                  <div class="form-section-card">
+                    <div class="form-section-header">
+                      <span class="step-num">4</span>
+                      <label class="form-section-label">Units & Patient Details</label>
+                    </div>
+
+                    <div class="form-row-2">
+                      <div class="form-group">
+                        <label class="field-sublabel">Units Required</label>
+                        <div class="stepper-input">
+                          <button type="button" class="stepper-btn" onclick="adjustUnits(-1)">-</button>
+                          <span class="stepper-value" id="unitsDisplay">2 Units</span>
+                          <button type="button" class="stepper-btn" onclick="adjustUnits(1)">+</button>
+                        </div>
+                        <input type="hidden" id="reqUnitsInput" value="2">
+                      </div>
+
+                      <div class="form-group">
+                        <label class="field-sublabel" for="reqDateInput">Required By</label>
+                        <input type="date" id="reqDateInput" class="form-input">
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="field-sublabel" for="reqContactInput">Contact Number for Hospital Coordinator *</label>
+                      <div class="input-with-icon">
+                        <i class="fa-solid fa-phone input-icon"></i>
+                        <input type="tel" id="reqContactInput" class="form-input" placeholder="+91 98765 43210" required value="+91 98765 43210">
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="field-sublabel" for="reqNotesInput">Additional Notes / Ward</label>
+                      <textarea id="reqNotesInput" class="form-textarea" rows="2" placeholder="e.g. Critical Surgery, ICU Ward Bed 12, Attender Rahul Sharma"></textarea>
+                    </div>
+                  </div>
+
+                  <!-- Submit Action Button -->
+                  <div class="submit-action-container">
+                    <button type="submit" class="btn-emergency-large" id="btnSubmitEmergencyReq">
+                      <span class="emergency-ripple"></span>
+                      <i class="fa-solid fa-triangle-exclamation"></i>
+                      <span>SEND EMERGENCY REQUEST</span>
+                    </button>
+                    <div class="request-guarantee-note">
+                      <i class="fa-solid fa-shield-check"></i>
+                      Nearby opted-in donors will receive instantaneous high-priority notifications.
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- ==============================================
+             SCREEN 6: EMERGENCY REQUEST SENT / LIVE RADAR
+             ============================================== -->
+        <section class="screen-view" id="screen-emergency-live">
+          <div class="emergency-live-wrapper">
+            
+            <!-- Dramatic High-Priority Emergency Status Banner -->
+            <div class="emergency-status-banner">
+              <div class="status-banner-badge">
+                <span class="red-beacon"></span>
+                <span>EMERGENCY REQUEST ACTIVE</span>
+              </div>
+              <h2 class="status-banner-title">
+                <span id="liveBloodGroup">O+</span> Blood Required
+              </h2>
+              <div class="status-hospital-tag">
+                <i class="fa-solid fa-hospital"></i> <span id="liveHospitalName">Apollo Speciality Hospital</span>
+              </div>
+              <div class="status-distance-tag">
+                <i class="fa-solid fa-location-dot"></i> <span id="liveDistance">Approximately 2.8 km away</span>
+              </div>
+            </div>
+
+            <!-- Emergency Live Grid (Radar on Left, Milestones & Match on Right) -->
+            <div class="emergency-live-grid">
+              
+              <!-- Left Column: Pulsing Radar Scanner & Simulation Controls -->
+              <div class="web-main-col">
+                <!-- Pulsing High-Tech Donor Radar Scanner -->
+                <div class="radar-container">
+                  <div class="radar-sweep"></div>
+                  <div class="radar-circle circle-1"></div>
+                  <div class="radar-circle circle-2"></div>
+                  <div class="radar-circle circle-3"></div>
+                  <div class="radar-center-hub">
+                    <i class="fa-solid fa-hospital"></i>
+                  </div>
+
+                  <!-- Simulated Blips representing nearby donors -->
+                  <div class="radar-blip blip-1" title="Donor (O+) 1.2km away"></div>
+                  <div class="radar-blip blip-2" title="Donor (O+) 2.4km away"></div>
+                  <div class="radar-blip blip-3" title="Donor (O-) 3.1km away"></div>
+                  <div class="radar-blip blip-4 blip-active-response" title="Responding Donor! 1.9km away"></div>
+
+                  <div class="radar-caption">
+                    <i class="fa-solid fa-satellite-dish fa-spin"></i>
+                    <span id="liveRadarStatus">Searching for compatible nearby donors…</span>
+                  </div>
+                </div>
+
+                <!-- Alerted Nearby Donors List Container -->
+                <div class="notified-donors-card">
+                  <div class="notified-donors-header">
+                    <i class="fa-solid fa-tower-broadcast text-primary"></i>
+                    <strong>Compatible Donors Alerted in Area</strong>
+                  </div>
+                  <div class="notified-donors-list" id="liveNotifiedDonorsList">
+                    <!-- Dynamically populated with nearby donors: Priya Swaminathan (O+), Sneha Reddy (O-), etc. -->
+                  </div>
+                </div>
+
+                <!-- Fast Testing Action: Test Donor Response -->
+                <div class="sim-speedup-bar" id="liveDonorTestBar">
+                  <span style="font-size: 0.78rem; color: var(--text-muted);">Simulate Response:</span>
+                  <button type="button" class="btn-chip" onclick="simulateNearbyDonorAcceptance()">
+                    <i class="fa-solid fa-hand-holding-droplet text-primary"></i> Simulate Nearby Donor Response
+                  </button>
+                </div>
+
+                <!-- Cancel / End Request Option -->
+                <div class="cancel-request-container">
+                  <button class="btn-outline-danger" onclick="confirmCancelRequest()">
+                    <i class="fa-solid fa-ban"></i> Cancel Emergency Request
+                  </button>
+                </div>
+              </div>
+
+              <!-- Right Column: Dynamic Progress Milestones & Response Card -->
+              <div class="web-side-col">
+                <!-- Dynamic Simulation Milestone Cards -->
+                <div class="milestones-container">
+                  <div class="milestone-item completed" id="milestone1">
+                    <div class="milestone-icon"><i class="fa-solid fa-check"></i></div>
+                    <div class="milestone-content">
+                      <strong>Emergency Alert Dispatched</strong>
+                      <span class="milestone-time">Just now</span>
+                    </div>
+                  </div>
+
+                  <div class="milestone-item" id="milestone2">
+                    <div class="milestone-icon"><i class="fa-solid fa-tower-broadcast"></i></div>
+                    <div class="milestone-content">
+                      <strong id="milestone2Text">Alerting nearby compatible donors...</strong>
+                      <span class="milestone-time" id="milestone2Time">Active</span>
+                    </div>
+                  </div>
+
+                  <div class="milestone-item" id="milestone3">
+                    <div class="milestone-icon"><i class="fa-solid fa-eye"></i></div>
+                    <div class="milestone-content">
+                      <strong id="milestone3Text">Donors reviewing patient emergency...</strong>
+                      <span class="milestone-time" id="milestone3Time">Pending</span>
+                    </div>
+                  </div>
+
+                  <div class="milestone-item" id="milestone4">
+                    <div class="milestone-icon"><i class="fa-solid fa-hand-holding-heart"></i></div>
+                    <div class="milestone-content">
+                      <strong id="milestone4Text">Waiting for donor response...</strong>
+                      <span class="milestone-time" id="milestone4Time">Pending</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SUCCESS DONOR RESPONSE CARD (Shown when matched) -->
+                <div class="donor-matched-card" id="donorMatchedCard" style="display: none;">
+                  <div class="matched-card-badge">
+                    <i class="fa-solid fa-heart-pulse"></i> VERIFIED DONOR EN ROUTE
+                  </div>
+                  <div class="matched-card-inner">
+                    <div class="donor-avatar-ring">
+                      <i class="fa-solid fa-user-check"></i>
+                    </div>
+                    <div class="matched-donor-details">
+                      <div class="donor-name-masked" id="liveMatchedDonorName">Priya Swaminathan</div>
+                      <div class="donor-blood-tag" id="liveMatchedDonorBlood">
+                        <span class="tag-blood">O+ Blood</span>
+                        <span class="tag-distance">~2.4 km away</span>
+                      </div>
+                      <div class="donor-eta" id="liveMatchedDonorEta">
+                        <i class="fa-solid fa-person-walking"></i> Est. arrival at blood bank: <strong>15 mins</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="matched-card-actions" style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="btn-primary btn-block" onclick="openDonorResponseModal()">
+                      <i class="fa-solid fa-address-book"></i> VIEW RESPONSE & INSTRUCTIONS
+                    </button>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                      <button class="btn-whatsapp-sm" id="btnLiveWhatsAppDonor" onclick="openDonorWhatsAppChat()" style="justify-content: center;">
+                        <i class="fa-brands fa-whatsapp"></i> WhatsApp Donor
+                      </button>
+                      <button class="btn-secondary-sm" onclick="openFulfillmentModal()" style="color: #10B981; border-color: #A7F3D0; background: #F0FDF4; justify-content: center;">
+                        <i class="fa-solid fa-circle-check"></i> Fulfill Request
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ==============================================
+             SCREEN 7: DONOR HOME DASHBOARD
+             ============================================== -->
+        <section class="screen-view" id="screen-home-donor">
+          <div class="donor-dashboard-wrapper">
+            
+            <!-- Donor Top Profile Header -->
+            <div class="user-greeting-card">
+              <div class="greeting-avatar">
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80" alt="Donor avatar" class="avatar-img" onerror="this.src='https://ui-avatars.com/api/?name=Donor&background=dc2626&color=fff'">
+                <span class="online-indicator"></span>
+              </div>
+              <div class="greeting-text">
+                <div class="greeting-subtitle">Welcome back 👋</div>
+                <div class="greeting-title" id="donorNameDisplay">Donor</div>
+              </div>
+              <div class="blood-type-badge" onclick="openCompatibilityModal()" style="cursor: pointer;" title="Tap to check blood compatibility guide">
+                <span class="badge-label">Donor Group</span>
+                <span class="badge-value" id="donorBloodGroupDisplay">O+</span>
+              </div>
+            </div>
+
+            <!-- Responsive Donor Web Grid -->
+            <div class="donor-web-grid">
+              
+              <!-- Left Column: Availability & Emergency Requests Feed -->
+              <div class="web-main-col">
+                <!-- Need Blood? Become a Requester Banner -->
+                <div class="requester-switch-banner">
+                  <div class="banner-content">
+                    <div class="banner-badge"><i class="fa-solid fa-hand-holding-droplet"></i> Need Blood Urgently?</div>
+                    <h4>In need of blood for yourself or a loved one?</h4>
+                    <p>You can become a requester anytime to broadcast emergency blood requests to compatible nearby donors.</p>
+                  </div>
+                  <button type="button" class="btn-switch-requester" onclick="switchActiveRoleAndNavigate()">
+                    <i class="fa-solid fa-hospital-user"></i> Switch to Requester Mode
+                  </button>
+                </div>
+
+                <!-- Large Availability Toggle Card -->
+                <div class="availability-status-card" id="donorAvailabilityCard">
+                  <div class="status-left">
+                    <div class="status-indicator-dot online" id="statusDot"></div>
+                    <div>
+                      <strong class="status-text" id="statusTextDisplay">Available for Emergency Requests</strong>
+                      <p class="status-sub" id="statusSubDisplay">You will receive priority push alerts for nearby emergencies</p>
+                    </div>
+                  </div>
+                  <div class="status-right">
+                    <label class="switch">
+                      <input type="checkbox" id="donorAvailabilityToggle" checked onchange="toggleDonorAvailability(this.checked)">
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Emergency Audio & Vibration Alert Banner -->
+                <div class="emergency-sound-status-card" style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.06), rgba(245, 158, 11, 0.06)); border: 1.5px solid rgba(220, 38, 38, 0.25); border-radius: 16px; padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: 0 4px 16px rgba(220, 38, 38, 0.06);">
+                  <div style="display: flex; align-items: center; gap: 14px;">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(220, 38, 38, 0.15); display: flex; align-items: center; justify-content: center; color: #dc2626; font-size: 1.25rem;">
+                      <i class="fa-solid fa-volume-high fa-shake"></i>
+                    </div>
+                    <div>
+                      <div style="font-size: 0.88rem; font-weight: 800; color: #0f172a;">Instant Emergency Audio & Vibration Alert</div>
+                      <div style="font-size: 0.76rem; color: #64748b;">Phone vibrates & loud alarm sounds immediately when blood is requested nearby</div>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-secondary-sm" onclick="testEmergencyAlertSound()" style="font-size: 0.8rem; padding: 8px 16px; background: #ffffff; border: 1.5px solid #dc2626; color: #dc2626; font-weight: 800; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);">
+                    <i class="fa-solid fa-play"></i> Test Vibrating Sound
+                  </button>
+                </div>
+
+                <!-- NEARBY EMERGENCY REQUESTS LIST -->
+                <div class="section-container">
+                  <div class="section-header">
+                    <div class="header-left-title">
+                      <h3 class="section-title">Nearby Emergency Requests</h3>
+                      <span class="counter-pill-alert" id="donorNearbyCount">0 Active</span>
+                    </div>
+                    <button class="refresh-btn-sm" onclick="refreshDonorNearbyList()" title="Refresh requests">
+                      <i class="fa-solid fa-rotate"></i>
+                    </button>
+                  </div>
+
+                  <div class="donor-requests-list" id="donorEmergencyCardsList">
+                    <!-- Populated dynamically by renderDonorEmergencies() -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Donor Stats & Eligibility Checklist -->
+              <div class="web-side-col">
+                <!-- Donor Impact Metrics -->
+                <div class="donor-header-card" style="margin-bottom: 0;">
+                  <strong style="font-size: 0.88rem; color: var(--text-main); margin-bottom: 8px; display: block;">
+                    <i class="fa-solid fa-medal text-amber"></i> Your Lifetime Impact
+                  </strong>
+                  <div class="donor-metrics-grid">
+                    <div class="metric-box">
+                      <div class="metric-number">3</div>
+                      <div class="metric-desc">Donations Made</div>
+                    </div>
+                    <div class="metric-box">
+                      <div class="metric-number text-primary">9</div>
+                      <div class="metric-desc">Lives Impacted</div>
+                    </div>
+                    <div class="metric-box">
+                      <div class="metric-number text-orange">4</div>
+                      <div class="metric-desc">Rapid Responses</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Eligibility Checklist Card -->
+                <div class="eligibility-card">
+                  <div class="eligibility-header">
+                    <i class="fa-solid fa-heart-circle-check text-primary"></i>
+                    <strong>Can I Donate Today?</strong>
+                  </div>
+                  <ul class="eligibility-list">
+                    <li><i class="fa-solid fa-check text-green"></i> Age 18–65 & weight above 50 kg</li>
+                    <li><i class="fa-solid fa-check text-green"></i> At least 90 days since last donation</li>
+                    <li><i class="fa-solid fa-check text-green"></i> Well-hydrated and had a light meal</li>
+                  </ul>
+                  <div class="eligibility-disclaimer">
+                    Final screening and hemoglobin check are performed on-site by medical technicians.
+                  </div>
+                </div>
+
+                <!-- Quick Action Button to Open Compatibility Matrix -->
+                <button class="btn-secondary-block" onclick="openCompatibilityModal()" style="font-size: 0.8rem;">
+                  <i class="fa-solid fa-vial text-rose"></i> View Blood Compatibility Matrix
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ==============================================
+             SCREEN 9: DONOR REQUEST DETAILS
+             ============================================== -->
+        <section class="screen-view" id="screen-donor-request-details">
+          <div class="request-details-wrapper">
+            
+            <div class="screen-title-bar">
+              <button class="back-link-btn" onclick="navigateToScreen('screen-home-donor')">
+                <i class="fa-solid fa-arrow-left"></i> Back to Requests
+              </button>
+              <h2 class="page-title">Emergency Blood Request</h2>
+            </div>
+
+            <!-- Emergency Card Details -->
+            <div class="details-main-card">
+              <div class="details-badge-row">
+                <div class="blood-req-badge lg">
+                  <span class="blood-group" id="detailBloodGroup">O+</span>
+                  <span class="req-label">Required</span>
+                </div>
+                <div class="urgency-pill-emergency" id="detailUrgencyBadge">
+                  <i class="fa-solid fa-triangle-exclamation"></i> EMERGENCY
+                </div>
+              </div>
+
+              <div class="details-info-table">
+                <div class="info-row">
+                  <span class="info-key"><i class="fa-solid fa-hospital"></i> Hospital:</span>
+                  <strong class="info-val" id="detailHospital">Apollo Speciality Hospital</strong>
+                </div>
+
+                <div class="info-row">
+                  <span class="info-key"><i class="fa-solid fa-location-dot"></i> Distance:</span>
+                  <strong class="info-val text-primary" id="detailDistance">Approximately 2.8 km away</strong>
+                </div>
+
+                <div class="info-row">
+                  <span class="info-key"><i class="fa-solid fa-vial"></i> Required:</span>
+                  <strong class="info-val" id="detailUnits">2 Units (Whole Blood / RBC)</strong>
+                </div>
+
+                <div class="info-row">
+                  <span class="info-key"><i class="fa-solid fa-user-injured"></i> Patient Case:</span>
+                  <strong class="info-val" id="detailPatientCase">Emergency Blood Request</strong>
+                </div>
+
+                <div class="info-row">
+                  <span class="info-key"><i class="fa-regular fa-clock"></i> Timeline:</span>
+                  <strong class="info-val text-primary">Immediate requirement within 2 hours</strong>
+                </div>
+              </div>
+
+              <!-- Hospital Map Mini Preview -->
+              <div class="mini-map-preview">
+                <div class="map-grid-visual">
+                  <div class="map-path-route"></div>
+                  <div class="map-pin user-pin" title="Your Location">
+                    <i class="fa-solid fa-person-dot"></i>
+                    <span>You</span>
+                  </div>
+                  <div class="map-pin hospital-pin" title="Hospital Location">
+                    <i class="fa-solid fa-hospital"></i>
+                    <span id="detailMapHospitalPin">Hospital Location</span>
+                  </div>
+                </div>
+                <div class="map-caption">
+                  <i class="fa-solid fa-route"></i> Estimated travel time: ~12 mins by car / bike
+                </div>
+              </div>
+
+              <!-- Important Disclaimer -->
+              <div class="hospital-safety-box">
+                <i class="fa-solid fa-shield-halved"></i>
+                <div>
+                  <strong>Medical Disclaimer</strong>
+                  <p>BloodConnect facilitates peer contact. Actual donor screening, hemoglobin validation, and collection are strictly performed under licensed blood bank protocol.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Primary Donor Action -->
+            <div class="donor-details-actions" id="donorDetailsActions">
+              <button class="btn-can-help-large" id="btnConfirmCanHelp" onclick="submitDonorHelpResponse()">
+                <i class="fa-solid fa-hand-holding-heart"></i>
+                <span>I CAN HELP</span>
+              </button>
+              <button class="btn-outline-secondary" onclick="navigateToScreen('screen-home-donor')">
+                I am not available right now
+              </button>
+            </div>
+
+            <!-- Response Confirmation Card (Shows after clicking I CAN HELP) -->
+            <div class="response-confirmed-card" id="responseConfirmedCard" style="display: none;">
+              <div class="confirmed-icon">
+                <i class="fa-solid fa-circle-check"></i>
+              </div>
+              <h3 class="confirmed-title">Thank You For Responding!</h3>
+              <p class="confirmed-message">
+                You have indicated that you can help with this request. The hospital blood bank and patient coordinator have been notified.
+              </p>
+
+              <div class="instructions-box">
+                <strong><i class="fa-solid fa-clipboard-list"></i> Next Steps:</strong>
+                <ol>
+                  <li>Please proceed to <strong id="confirmedHospitalStep">Hospital Blood Bank</strong>.</li>
+                  <li>Show Reference ID: <strong class="text-primary" id="confirmedRefCode">BC-EMERG-842</strong>.</li>
+                  <li>Follow the hospital's standard donor screening & donation process.</li>
+                </ol>
+              </div>
+
+              <div class="confirmed-actions" style="display: flex; flex-direction: column; gap: 8px;">
+                <button class="btn-whatsapp btn-block" onclick="openRequesterWhatsAppChat()">
+                  <i class="fa-brands fa-whatsapp"></i> Chat with Requester on WhatsApp
+                </button>
+                <button class="btn-primary btn-block" onclick="showHospitalDetailsModal()">
+                  <i class="fa-solid fa-hospital-user"></i> View Hospital Details & Route
+                </button>
+                <button class="btn-secondary btn-block" onclick="navigateToScreen('screen-home-donor')">
+                  Return to Dashboard
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ==============================================
+             SCREEN 10: MY REQUESTS (HISTORY & ACTIVE)
+             ============================================== -->
+        <section class="screen-view" id="screen-my-requests">
+          <div class="my-requests-wrapper">
+            
+            <div class="screen-title-bar">
+              <h2 class="page-title">My Blood Requests</h2>
+              <p class="page-subtitle">Track status and past emergency alerts</p>
+            </div>
+
+            <!-- Tab Navigation Filter -->
+            <div class="requests-tab-nav">
+              <button class="tab-btn active" id="tabActive" onclick="filterRequestsTab('active')">
+                Active (<span id="tabCountActive">1</span>)
+              </button>
+              <button class="tab-btn" id="tabCompleted" onclick="filterRequestsTab('completed')">
+                Completed (<span id="tabCountCompleted">2</span>)
+              </button>
+              <button class="tab-btn" id="tabCancelled" onclick="filterRequestsTab('cancelled')">
+                Cancelled (<span id="tabCountCancelled">0</span>)
+              </button>
+            </div>
+
+            <!-- Filtered Request Items List -->
+            <div class="my-requests-list" id="myRequestsListContainer">
+              <!-- Dynamically populated via script.js -->
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ==============================================
+             SCREEN 11: PROFILE SCREEN
+             ============================================== -->
+        <section class="screen-view" id="screen-profile">
+          <div class="profile-wrapper">
+            
+            <!-- Responsive Profile Web Grid -->
+            <div class="profile-web-grid">
+              
+              <!-- Left Column: Profile Card & Quick Actions -->
+              <div class="web-main-col">
+                <!-- Profile Identity Card -->
+                <div class="profile-card">
+                  <div class="profile-avatar-container">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Profile" class="profile-img" id="profileAvatarImg" onerror="this.src='https://ui-avatars.com/api/?name=User&background=dc2626&color=fff'">
+                    <button class="avatar-edit-btn" onclick="showToast('Profile photo update simulated', 'info')" title="Change photo">
+                      <i class="fa-solid fa-camera"></i>
+                    </button>
+                    <span class="blood-type-floating-tag" id="profileBloodTag">O+</span>
+                  </div>
+
+                  <h3 class="profile-name" id="profileNameDisplay">User</h3>
+                  <p class="profile-phone" id="profilePhoneDisplay">Not signed in</p>
+                  <div class="profile-role-badge" id="profileRoleBadge">
+                    <i class="fa-solid fa-user"></i> Registered Member
+                  </div>
+                </div>
+
+                <!-- Logout Button -->
+                <div class="logout-container">
+                  <button class="btn-logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout of BloodConnect</span>
+                  </button>
+                  <div class="app-version-tag">BloodConnect v1.0.4 • Hackathon Prototype</div>
+                </div>
+              </div>
+
+              <!-- Right Column: Settings Groups -->
+              <div class="web-side-col">
+                <!-- Profile Settings Group -->
+                <div class="settings-group">
+                  <h4 class="settings-group-title">Account & Preferences</h4>
+
+                  <div class="setting-item" onclick="openEditProfileModal()">
+                    <div class="setting-item-left">
+                      <div class="setting-icon"><i class="fa-solid fa-user-pen"></i></div>
+                      <div>
+                        <strong>Edit Profile</strong>
+                        <span>Name, contact details, location</span>
+                      </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right setting-arrow"></i>
+                  </div>
+
+                  <div class="setting-item">
+                    <div class="setting-item-left">
+                      <div class="setting-icon"><i class="fa-solid fa-location-dot"></i></div>
+                      <div>
+                        <strong>Primary City / Area</strong>
+                        <span id="profileCityDisplay">Anna Nagar, Chennai</span>
+                      </div>
+                    </div>
+                    <button class="btn-text-sm" onclick="openEditProfileModal()">Change</button>
+                  </div>
+
+                  <div class="setting-item">
+                    <div class="setting-item-left">
+                      <div class="setting-icon"><i class="fa-solid fa-droplet"></i></div>
+                      <div>
+                        <strong>Blood Group</strong>
+                        <span id="profileBloodGroupDisplay">O Positive (O+)</span>
+                      </div>
+                    </div>
+                    <button class="btn-text-sm" onclick="openEditProfileModal()">Update</button>
+                  </div>
+
+                  <div class="setting-item danger-item" onclick="deleteCurrentAccount()" style="cursor: pointer;">
+                    <div class="setting-item-left">
+                      <div class="setting-icon text-danger" style="background: rgba(239, 68, 68, 0.1); color: #DC2626;"><i class="fa-solid fa-trash-can"></i></div>
+                      <div>
+                        <strong class="text-danger">Delete My Account</strong>
+                        <span>Permanently remove your account and all data</span>
+                      </div>
+                    </div>
+                    <span class="badge-pill-outline" style="border-color: #FCA5A5; color: #DC2626;">Delete</span>
+                  </div>
+                </div>
+
+                <!-- Emergency Settings -->
+                <div class="settings-group">
+                  <h4 class="settings-group-title">Emergency Alert Settings</h4>
+
+                  <div class="setting-toggle-item">
+                    <div class="toggle-text">
+                      <strong>Emergency Notifications</strong>
+                      <span>Receive high-priority sound alerts for nearby requests</span>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="profileEmergencyAlertsToggle" checked onchange="handleEmergencyAlertsToggle(this.checked)">
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+
+                  <div class="setting-toggle-item">
+                    <div class="toggle-text">
+                      <strong>Available for Emergencies</strong>
+                      <span>Allow requesters to discover you in donor radius searches</span>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="profileAvailabilityToggle" checked onchange="toggleDonorAvailability(this.checked)">
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Demo Management & Safety -->
+                <div class="settings-group">
+                  <h4 class="settings-group-title">Prototype & Safety</h4>
+
+                  <div class="setting-item" onclick="toggleUserRole()">
+                    <div class="setting-item-left">
+                      <div class="setting-icon"><i class="fa-solid fa-arrows-rotate"></i></div>
+                      <div>
+                        <strong>Switch Active View</strong>
+                        <span id="profileSwitchSubtext">Current: Requester Mode</span>
+                      </div>
+                    </div>
+                    <span class="badge-pill-outline">Switch</span>
+                  </div>
+
+                  <div class="setting-item" onclick="showSafetyGuidelinesModal()">
+                    <div class="setting-item-left">
+                      <div class="setting-icon"><i class="fa-solid fa-book-medical"></i></div>
+                      <div>
+                        <strong>Safety & Guidelines</strong>
+                        <span>Medical eligibility, screening standards</span>
+                      </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right setting-arrow"></i>
+                  </div>
+
+                  <div class="setting-item" onclick="resetPrototypeData()" style="cursor: pointer;">
+                    <div class="setting-item-left">
+                      <div class="setting-icon text-danger" style="background: rgba(239, 68, 68, 0.1); color: #DC2626;"><i class="fa-solid fa-users-slash"></i></div>
+                      <div>
+                        <strong class="text-danger">Clear All Accounts & Wipe Data</strong>
+                        <span>Wipe all user accounts and reset database to zero</span>
+                      </div>
+                    </div>
+                    <span class="badge-pill-outline" style="border-color: #FCA5A5; color: #DC2626;">Wipe All</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+
+      <!-- ==============================================
+           SCREEN 12: BOTTOM NAVIGATION BAR
+           ============================================== -->
+      <nav class="app-bottom-nav" id="appBottomNav">
+        <!-- Requester Nav Tabs -->
+        <div class="nav-tabs-wrapper" id="requesterNavTabs">
+          <button class="nav-tab-btn active" data-target="screen-home-requester" onclick="handleNavTabClick('screen-home-requester', this)">
+            <i class="fa-solid fa-house-chimney nav-icon"></i>
+            <span class="nav-label">Home</span>
+          </button>
+          
+          <button class="nav-tab-btn" data-target="screen-create-request" onclick="handleNavTabClick('screen-create-request', this)">
+            <div class="request-nav-pill">
+              <i class="fa-solid fa-droplet nav-icon"></i>
+            </div>
+            <span class="nav-label">Request</span>
+          </button>
+
+          <button class="nav-tab-btn" data-target="screen-my-requests" onclick="handleNavTabClick('screen-my-requests', this)">
+            <i class="fa-solid fa-clipboard-list nav-icon"></i>
+            <span class="nav-label">Requests</span>
+          </button>
+
+          <button class="nav-tab-btn" data-target="screen-profile" onclick="handleNavTabClick('screen-profile', this)">
+            <i class="fa-solid fa-user nav-icon"></i>
+            <span class="nav-label">Profile</span>
+          </button>
+        </div>
+
+        <!-- Donor Nav Tabs -->
+        <div class="nav-tabs-wrapper" id="donorNavTabs" style="display: none;">
+          <button class="nav-tab-btn active" data-target="screen-home-donor" onclick="handleNavTabClick('screen-home-donor', this)">
+            <i class="fa-solid fa-house-chimney nav-icon"></i>
+            <span class="nav-label">Home</span>
+          </button>
+
+          <button class="nav-tab-btn" data-target="screen-donor-alerts" onclick="triggerSimulatedEmergencyAlert()">
+            <div class="alert-nav-pill">
+              <i class="fa-solid fa-bell nav-icon"></i>
+              <span class="badge-dot" id="navAlertDot"></span>
+            </div>
+            <span class="nav-label">Alerts</span>
+          </button>
+
+          <button class="nav-tab-btn" data-target="screen-my-requests" onclick="handleNavTabClick('screen-my-requests', this)">
+            <i class="fa-solid fa-clipboard-list nav-icon"></i>
+            <span class="nav-label">Requests</span>
+          </button>
+
+          <button class="nav-tab-btn" data-target="screen-profile" onclick="handleNavTabClick('screen-profile', this)">
+            <i class="fa-solid fa-user nav-icon"></i>
+            <span class="nav-label">Profile</span>
+          </button>
+        </div>
+      </nav>
+
+    </div>
+  </div>
+
+  <!-- ==============================================
+       SCREEN 8: EMERGENCY DONOR NOTIFICATION MODAL
+       ============================================== -->
+  <div class="emergency-modal-overlay" id="emergencyDonorModal" role="dialog" aria-modal="true">
+    <div class="emergency-modal-sheet" id="emergencyModalSheet">
+      <div class="modal-drag-indicator"></div>
+      
+      <div class="emergency-modal-header">
+        <div class="emergency-flashing-badge">
+          <span class="alarm-pulse"></span>
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>URGENT BLOOD REQUEST</span>
+        </div>
+        <div class="countdown-timer-chip">
+          <i class="fa-regular fa-hourglass-half"></i>
+          <span id="countdownTimerText">05:00</span>
+        </div>
+      </div>
+
+      <div class="emergency-modal-body">
+        <div class="emergency-blood-highlight">
+          <div class="blood-symbol-large" id="emergModalBloodGroup">O+</div>
+          <div class="blood-req-headline">
+            <h3 id="emergModalHeadline">O+ Blood Needed Urgently</h3>
+            <p id="emergModalSubtext">Immediate response requested by ICU Coordinator</p>
+          </div>
+        </div>
+
+        <div class="emergency-details-list">
+          <div class="emerg-row">
+            <i class="fa-solid fa-location-dot text-primary"></i>
+            <span id="emergModalDistance"><strong>Approximately 2.8 km</strong> from your current location</span>
+          </div>
+          <div class="emerg-row">
+            <i class="fa-solid fa-hospital text-primary"></i>
+            <span><strong id="emergModalHospital">Apollo Speciality Hospital</strong>, Emergency Block</span>
+          </div>
+          <div class="emerg-row">
+            <i class="fa-solid fa-vials text-primary"></i>
+            <span id="emergModalUnits"><strong>2 Units</strong> required immediately for critical surgery</span>
+          </div>
+          <div class="emerg-row">
+            <i class="fa-solid fa-circle-exclamation text-danger"></i>
+            <span><strong>🔴 Emergency Status</strong> — Direct matching active</span>
+          </div>
+        </div>
+
+        <div class="emergency-safety-note">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Voluntary response only. Hospital conducts mandatory pre-donation screening.</span>
+        </div>
+      </div>
+
+      <div class="emergency-modal-actions">
+        <button class="btn-emergency-action" id="btnAcceptEmergencyModal" onclick="handleDonorAcceptEmergency()">
+          <span class="btn-shimmer"></span>
+          <i class="fa-solid fa-hand-holding-droplet"></i>
+          <span>🩸 I CAN HELP NOW</span>
+        </button>
+        <button type="button" class="btn-emergency-mute" id="btnMuteEmergencyAlarm" onclick="toggleMuteActiveEmergencyAlarm()" style="background: rgba(220, 38, 38, 0.08); color: #dc2626; border: 1.5px solid rgba(220, 38, 38, 0.3); border-radius: 12px; padding: 11px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s ease;">
+          <i class="fa-solid fa-volume-xmark" id="btnMuteEmergencyIcon"></i> <span id="btnMuteEmergencyText">Silence Alarm & Vibration</span>
+        </button>
+        <button class="btn-emergency-decline" onclick="closeEmergencyDonorModal()">
+          <span>Not Available</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       SCREEN 5 CONFIRMATION MODAL: SEND EMERGENCY REQUEST
+       ============================================== -->
+  <div class="modal-overlay" id="confirmRequestModal">
+    <div class="modal-dialog">
+      <div class="modal-icon-badge warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 class="modal-title">Send Emergency Blood Request?</h3>
+      <p class="modal-desc">
+        An immediate alert for <strong id="modalReqBloodGroup">O+</strong> blood will be broadcast to all nearby compatible donors within a 5 km radius who have opted into emergency alerts.
+      </p>
+      
+      <div class="modal-preview-box">
+        <div class="preview-row">
+          <span>Hospital:</span>
+          <strong id="modalHospitalPreview">Apollo Speciality Hospital</strong>
+        </div>
+        <div class="preview-row">
+          <span>Units:</span>
+          <strong id="modalUnitsPreview">2 Units</strong>
+        </div>
+        <div class="preview-row">
+          <span>Urgency:</span>
+          <span class="badge-urgent-tag" id="modalUrgencyPreview">🔴 Emergency</span>
+        </div>
+      </div>
+
+      <div class="modal-actions-row">
+        <button class="btn-secondary" onclick="closeModal('confirmRequestModal')">Cancel</button>
+        <button class="btn-primary" onclick="executeSendEmergencyRequest()">
+          <i class="fa-solid fa-paper-plane"></i> Send Request
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       MODAL: DONOR RESPONSE / HOSPITAL DETAILS
+       ============================================== -->
+  <div class="modal-overlay" id="hospitalDetailsModal">
+    <div class="modal-dialog">
+      <div class="modal-icon-badge success">
+        <i class="fa-solid fa-hospital-user"></i>
+      </div>
+      <h3 class="modal-title">Hospital Coordinator Details</h3>
+      <p class="modal-desc">
+        Please present this confirmation reference at the blood bank reception counter.
+      </p>
+
+      <div class="hospital-contact-card">
+        <div class="contact-header">
+          <strong id="modalHospitalDetailName">Apollo Speciality Hospital</strong>
+          <span>Blood Transfusion & Banking Services</span>
+        </div>
+        <div class="contact-details">
+          <div class="detail-item"><i class="fa-solid fa-location-dot"></i> <span id="modalHospitalDetailLocation">Greams Road, Chennai</span></div>
+          <div class="detail-item"><i class="fa-solid fa-building"></i> Block C, 1st Floor, Room 104</div>
+          <div class="detail-item"><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> WhatsApp: <strong id="modalHospitalDetailContact">+91 98401 23456</strong></div>
+          <div class="detail-item"><i class="fa-solid fa-ticket"></i> Reference Token: <strong class="text-primary" id="modalHospitalRefCode">BC-EMERG-842</strong></div>
+        </div>
+      </div>
+
+      <div class="modal-actions-row">
+        <button class="btn-secondary" onclick="closeModal('hospitalDetailsModal')">Close</button>
+        <button class="btn-whatsapp" onclick="openHospitalWhatsAppChat()">
+          <i class="fa-brands fa-whatsapp"></i> Chat on WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       MODAL: EDIT PROFILE
+       ============================================== -->
+  <div class="modal-overlay" id="editProfileModal">
+    <div class="modal-dialog">
+      <div class="modal-header-row">
+        <h3 class="modal-title">Edit Profile</h3>
+        <button class="modal-close-btn" onclick="closeModal('editProfileModal')">&times;</button>
+      </div>
+      <form onsubmit="handleProfileSave(event)">
+        <div class="form-group">
+          <label class="form-label" for="editName">Full Name</label>
+          <input type="text" id="editName" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="editPhone">Phone Number</label>
+          <input type="tel" id="editPhone" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="editCity">City / Area</label>
+          <input type="text" id="editCity" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="editBloodGroup">Blood Group</label>
+          <select id="editBloodGroup" class="form-input">
+            <option value="A+">A+</option>
+            <option value="A-">A-</option>
+            <option value="B+">B+</option>
+            <option value="B-">B-</option>
+            <option value="AB+">AB+</option>
+            <option value="AB-">AB-</option>
+            <option value="O+">O+</option>
+            <option value="O-">O-</option>
+          </select>
+        </div>
+        <div class="modal-actions-row">
+          <button type="button" class="btn-secondary" onclick="closeModal('editProfileModal')">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       MODAL: SAFETY & GUIDELINES
+       ============================================== -->
+  <div class="modal-overlay" id="safetyGuidelinesModal">
+    <div class="modal-dialog">
+      <div class="modal-header-row">
+        <h3 class="modal-title"><i class="fa-solid fa-shield-heart text-primary"></i> Safety & Realism</h3>
+        <button class="modal-close-btn" onclick="closeModal('safetyGuidelinesModal')">&times;</button>
+      </div>
+      <div class="safety-content-scroll">
+        <div class="safety-point">
+          <strong>1. Community Connection Protocol</strong>
+          <p>BloodConnect serves strictly as a real-time communications network between emergency requesters and voluntary registered donors.</p>
+        </div>
+        <div class="safety-point">
+          <strong>2. Professional Medical Screening</strong>
+          <p>The application does NOT certify donor medical eligibility. The hospital/blood bank performs mandatory screening tests (hemoglobin, infectious disease markers, blood grouping) before collection.</p>
+        </div>
+        <div class="safety-point">
+          <strong>3. Approximate Geolocation</strong>
+          <p>Distances are displayed approximately (e.g. ~2.8 km) to maintain donor privacy and safety.</p>
+        </div>
+        <div class="safety-point">
+          <strong>4. Opt-In Voluntarism</strong>
+          <p>All emergency notifications are sent exclusively to donors who have actively toggled emergency opt-in settings.</p>
+        </div>
+      </div>
+      <div class="modal-actions-row">
+        <button class="btn-primary btn-block" onclick="closeModal('safetyGuidelinesModal')">I Understand</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       MODAL: NOTIFICATION CENTER DRAWER
+       ============================================== -->
+  <div class="modal-overlay" id="notificationCenterModal">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header-row">
+        <div class="modal-title-with-icon">
+          <i class="fa-solid fa-bell text-primary"></i>
+          <h3 class="modal-title" style="margin: 0;">Notification Center</h3>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal('notificationCenterModal')">&times;</button>
+      </div>
+      
+      <div class="notif-filter-tabs">
+        <button class="notif-tab active" onclick="filterNotifications('all', this)">All (<span id="notifCountAll">4</span>)</button>
+        <button class="notif-tab" onclick="filterNotifications('emergency', this)">Emergencies (<span id="notifCountEmergency">2</span>)</button>
+        <button class="notif-tab" onclick="filterNotifications('matches', this)">Matches (<span id="notifCountMatches">2</span>)</button>
+      </div>
+
+      <div class="notif-list-container" id="notificationList">
+        <!-- Populated via script.js -->
+      </div>
+
+      <div class="modal-actions-row">
+        <button class="btn-secondary" onclick="markAllNotificationsRead()">
+          <i class="fa-solid fa-check-double"></i> Mark All Read
+        </button>
+        <button class="btn-primary" onclick="triggerSimulatedEmergencyAlert(); closeModal('notificationCenterModal');">
+          <i class="fa-solid fa-triangle-exclamation"></i> Test Alert
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       MODAL: INTERACTIVE BLOOD COMPATIBILITY MATRIX
+       ============================================== -->
+  <div class="modal-overlay" id="compatibilityModal">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header-row">
+        <div class="modal-title-with-icon">
+          <i class="fa-solid fa-droplet text-primary"></i>
+          <h3 class="modal-title" style="margin: 0;">Blood Compatibility Guide</h3>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal('compatibilityModal')">&times;</button>
+      </div>
+
+      <p class="modal-desc" style="text-align: left; margin-bottom: 8px;">
+        Tap any blood group to see who can give to them and who they can donate to.
+      </p>
+
+      <div class="compat-group-selector" id="compatGroupButtons">
+        <button class="compat-chip" onclick="selectCompatibilityGroup('O-')">O-</button>
+        <button class="compat-chip active" onclick="selectCompatibilityGroup('O+')">O+</button>
+        <button class="compat-chip" onclick="selectCompatibilityGroup('A-')">A-</button>
+        <button class="compat-chip" onclick="selectCompatibilityGroup('A+')">A+</button>
+        <button class="compat-chip" onclick="selectCompatibilityGroup('B-')">B-</button>
+        <button class="compat-chip" onclick="selectCompatibilityGroup('B+')">B+</button>
+        <button class="compat-chip" onclick="selectCompatibilityGroup('AB-')">AB-</button>
+        <button class="compat-chip" onclick="selectCompatibilityGroup('AB+')">AB+</button>
+      </div>
+
+      <div class="compat-card-details" id="compatCardDetails">
+        <div class="compat-hero">
+          <div class="compat-badge-large" id="compatActiveBadge">O+</div>
+          <div class="compat-hero-meta">
+            <h4 id="compatTitle">O Positive (O+)</h4>
+            <span class="compat-subtitle" id="compatSubtitle">Most common blood group (Universal Red Cell recipient limit)</span>
+          </div>
+        </div>
+
+        <div class="compat-section">
+          <div class="compat-label text-green">
+            <i class="fa-solid fa-hand-holding-heart"></i> CAN RECEIVE BLOOD FROM:
+          </div>
+          <div class="compat-pills" id="compatReceivePills">
+            <span class="pill-chip green">O+</span>
+            <span class="pill-chip green">O- (Universal Donor)</span>
+          </div>
+        </div>
+
+        <div class="compat-section">
+          <div class="compat-label text-primary">
+            <i class="fa-solid fa-heart-pulse"></i> CAN DONATE RED CELLS TO:
+          </div>
+          <div class="compat-pills" id="compatDonatePills">
+            <span class="pill-chip red">O+</span>
+            <span class="pill-chip red">A+</span>
+            <span class="pill-chip red">B+</span>
+            <span class="pill-chip red">AB+</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions-row">
+        <button class="btn-primary btn-block" onclick="closeModal('compatibilityModal')">Close Guide</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       MODAL: NEARBY REQUESTS & MAP EXPLORER
+       ============================================== -->
+  <div class="modal-overlay" id="nearbyExplorerModal">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header-row">
+        <div class="modal-title-with-icon">
+          <i class="fa-solid fa-map-location-dot text-primary"></i>
+          <h3 class="modal-title" style="margin: 0;">Nearby Emergency Requests</h3>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal('nearbyExplorerModal')">&times;</button>
+      </div>
+
+      <!-- Radius selector -->
+      <div class="radius-filter-row">
+        <span class="radius-label"><i class="fa-solid fa-radar"></i> Radius:</span>
+        <div class="radius-chips">
+          <button class="radius-chip" onclick="setSearchRadius(1, this)">1 km</button>
+          <button class="radius-chip active" onclick="setSearchRadius(3, this)">3 km</button>
+          <button class="radius-chip" onclick="setSearchRadius(5, this)">5 km</button>
+          <button class="radius-chip" onclick="setSearchRadius(10, this)">10 km</button>
+        </div>
+      </div>
+
+      <!-- Visual Radar Map Simulation -->
+      <div class="explorer-map-box">
+        <div class="map-grid-overlay"></div>
+        <div class="map-radar-circle r-1"></div>
+        <div class="map-radar-circle r-2"></div>
+        
+        <div class="map-center-pin" title="Your GPS Location">
+          <i class="fa-solid fa-person-pin"></i>
+          <span>You</span>
+        </div>
+
+        <div class="hospital-map-blip blip-xyz" onclick="openDonorRequestDetails('req-001'); closeModal('nearbyExplorerModal');" title="Apollo Speciality Hospital (O+)">
+          <span class="map-blood-tag">O+</span>
+          <i class="fa-solid fa-hospital"></i>
+        </div>
+
+        <div class="hospital-map-blip blip-city" onclick="openDonorRequestDetails('req-002'); closeModal('nearbyExplorerModal');" title="City Care (A+)">
+          <span class="map-blood-tag">A+</span>
+          <i class="fa-solid fa-hospital"></i>
+        </div>
+
+        <div class="map-legend">
+          <span><span class="legend-dot red"></span> Emergency</span>
+          <span><span class="legend-dot amber"></span> Urgent</span>
+        </div>
+      </div>
+
+      <!-- Quick List of Nearby -->
+      <div class="nearby-requests-scroll" id="nearbyRequestsScroll">
+        <div class="nearby-card-mini">
+          <div class="mini-left">
+            <span class="blood-req-badge"><span class="blood-group">O+</span></span>
+            <div>
+              <strong>Apollo Speciality Hospital</strong>
+              <span>2.8 km away • ICU Surgery (2 units)</span>
+            </div>
+          </div>
+          <button class="btn-can-help btn-sm" onclick="openDonorRequestDetails('req-001'); closeModal('nearbyExplorerModal');">
+            Help
+          </button>
+        </div>
+
+        <div class="nearby-card-mini">
+          <div class="mini-left">
+            <span class="blood-req-badge secondary"><span class="blood-group">A+</span></span>
+            <div>
+              <strong>City Care Medical Centre</strong>
+              <span>5.4 km away • Dialysis (1 unit)</span>
+            </div>
+          </div>
+          <button class="btn-view-req btn-sm" onclick="openDonorRequestDetails('req-002'); closeModal('nearbyExplorerModal');">
+            View
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-actions-row">
+        <button class="btn-primary btn-block" onclick="closeModal('nearbyExplorerModal')">Close Map</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       MODAL: TURN-BY-TURN HOSPITAL NAVIGATION ROUTE
+       ============================================== -->
+  <div class="modal-overlay" id="routeNavigationModal">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header-row">
+        <div class="modal-title-with-icon">
+          <i class="fa-solid fa-diamond-turn-right text-primary"></i>
+          <h3 class="modal-title" style="margin: 0;">Route to Hospital</h3>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal('routeNavigationModal')">&times;</button>
+      </div>
+
+      <div class="route-summary-banner">
+        <div class="route-metric">
+          <span class="route-metric-val text-primary">12 mins</span>
+          <span class="route-metric-label">Estimated Travel</span>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="route-metric">
+          <span class="route-metric-val">2.8 km</span>
+          <span class="route-metric-label">Direct Distance</span>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="route-metric">
+          <span class="route-metric-val text-green">Moderate</span>
+          <span class="route-metric-label">Traffic Status</span>
+        </div>
+      </div>
+
+      <div class="turn-directions-list">
+        <div class="turn-step">
+          <div class="turn-icon"><i class="fa-solid fa-arrow-up"></i></div>
+          <div class="turn-content">
+            <strong>Head north on Anna Nagar 2nd Avenue</strong>
+            <span>Continue straight for 600 meters</span>
+          </div>
+        </div>
+        <div class="turn-step">
+          <div class="turn-icon"><i class="fa-solid fa-arrow-turn-up text-primary"></i></div>
+          <div class="turn-content">
+            <strong>Turn right onto 100 Feet Road</strong>
+            <span>Drive for 1.4 km towards Roundtana</span>
+          </div>
+        </div>
+        <div class="turn-step">
+          <div class="turn-icon"><i class="fa-solid fa-arrow-turn-down text-primary"></i></div>
+          <div class="turn-content">
+            <strong>Turn slightly left at Hospital Main Boulevard</strong>
+            <span>Hospital entrance gate 2 will be on your left</span>
+          </div>
+        </div>
+        <div class="turn-step dest">
+          <div class="turn-icon"><i class="fa-solid fa-hospital text-green"></i></div>
+          <div class="turn-content">
+            <strong id="navModalHospitalDest">Arrive at Destination Hospital</strong>
+            <span>Proceed to Blood Bank / Reception</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions-row">
+        <button class="btn-whatsapp" onclick="openHospitalWhatsAppChat()">
+          <i class="fa-brands fa-whatsapp"></i> WhatsApp Desk
+        </button>
+        <button class="btn-primary" onclick="startSimulatedNavigation()">
+          <i class="fa-solid fa-location-arrow"></i> Start GPS
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       MODAL: SIMULATED IN-APP CALL DIALER
+       ============================================== -->
+  <div class="modal-overlay" id="simulatedCallModal">
+    <div class="modal-dialog calling-dialog">
+      <div class="calling-pulse-ring"></div>
+      <div class="calling-avatar">
+        <i class="fa-solid fa-user-doctor"></i>
+      </div>
+      <h3 class="calling-name" id="callingContactName">Hospital Blood Bank Desk</h3>
+      <p class="calling-number" id="callingContactNumber">+91 44 2834 9900</p>
+      <div class="calling-status" id="callingStatusText">Connecting...</div>
+
+      <div class="calling-actions-grid">
+        <button class="calling-util-btn" onclick="toggleCallMute(this)" title="Mute">
+          <i class="fa-solid fa-microphone-slash"></i>
+          <span>Mute</span>
+        </button>
+        <button class="calling-util-btn" onclick="toggleCallSpeaker(this)" title="Speaker">
+          <i class="fa-solid fa-volume-high"></i>
+          <span>Speaker</span>
+        </button>
+        <button class="calling-util-btn" onclick="showToast('Keypad simulated', 'info')" title="Keypad">
+          <i class="fa-solid fa-grip"></i>
+          <span>Keypad</span>
+        </button>
+      </div>
+
+      <button class="btn-end-call" onclick="endSimulatedCall()">
+        <i class="fa-solid fa-phone-slash"></i>
+        <span>End Call</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       MODAL: FULFILLMENT / BLOOD RECEIVED CELEBRATION
+       ============================================== -->
+  <div class="modal-overlay" id="fulfillmentModal">
+    <div class="modal-dialog">
+      <div class="modal-icon-badge success">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <h3 class="modal-title">Emergency Blood Received!</h3>
+      <p class="modal-desc">
+        Thank you for updating the network. Verified Donor #D-408's donation has been logged, and both lives impacted and response scores have been credited.
+      </p>
+
+      <div class="fulfillment-stats-card">
+        <div class="f-stat">
+          <strong>2 Units</strong>
+          <span>O+ Whole Blood</span>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="f-stat">
+          <strong class="text-green">~18 mins</strong>
+          <span>Total Response Time</span>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="f-stat">
+          <strong class="text-primary">+3 Lives</strong>
+          <span>Saved</span>
+        </div>
+      </div>
+
+      <div class="modal-actions-row">
+        <button class="btn-primary btn-block" onclick="completeFulfillmentAndRedirect()">
+          <i class="fa-solid fa-check"></i> Return to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container for Notifications -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Audio Chime Generator via Web Audio API -->
+  <script src="script.js"></script>
+</body>
+</html>
