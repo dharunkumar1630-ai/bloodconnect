@@ -1,0 +1,120 @@
+{
+  "users": [
+    {
+      "id": "usr-1790396085483",
+      "name": "Dharun Kumar",
+      "age": 19,
+      "email": "dharunkumar1630@gmail.com",
+      "phone": "+919585075095",
+      "address": "navakarai,coimbatore",
+      "city": "navakarai,coimbatore",
+      "bloodGroup": "A+",
+      "role": "donor",
+      "password": "123456",
+      "availability": true,
+      "emergencyOptIn": true,
+      "relationship": "Donor",
+      "impactLives": 0,
+      "donationsCount": 0,
+      "rapidResponses": 0,
+      "createdAt": "2026-09-26T04:14:45.483Z"
+    },
+    {
+      "id": "usr-1790396389628",
+      "name": "lakshan",
+      "age": 19,
+      "email": "dharunkumar1630@gmail.com",
+      "phone": "+91967438538",
+      "address": "ukkadam,coimbatore",
+      "city": "ukkadam,coimbatore",
+      "bloodGroup": "A+",
+      "role": "donor",
+      "password": "123456",
+      "availability": true,
+      "emergencyOptIn": true,
+      "relationship": "Donor",
+      "impactLives": 0,
+      "donationsCount": 0,
+      "rapidResponses": 1,
+      "createdAt": "2026-09-26T04:19:49.628Z"
+    },
+    {
+      "id": "usr-1790396551567",
+      "name": "Dharun Kumar",
+      "age": 19,
+      "email": "dharunkumar1630@gmail.com",
+      "phone": "+91967438538",
+      "address": "ukkadam,coimbatore",
+      "city": "ukkadam,coimbatore",
+      "bloodGroup": "A+",
+      "role": "donor",
+      "password": "123456",
+      "availability": true,
+      "emergencyOptIn": true,
+      "relationship": "Donor",
+      "impactLives": 0,
+      "donationsCount": 0,
+      "rapidResponses": 0,
+      "createdAt": "2026-09-26T04:22:31.568Z"
+    }
+  ],
+  "requests": [
+    {
+      "id": "req-1790396173600",
+      "bloodGroup": "A+",
+      "hospital": "SURIYA HOSPITAL,UKKADAM,COIMBATORE",
+      "location": "navakarai,coimbatore",
+      "distance": "2.4 km",
+      "urgency": "Emergency",
+      "units": 1,
+      "patientCase": "urgent",
+      "contact": "+919585075095",
+      "notes": "urgent",
+      "status": "responded",
+      "createdAt": "2026-09-26T04:16:13.600Z",
+      "requesterId": "usr-1790396085483",
+      "requesterName": "Dharun Kumar",
+      "respondedDonor": {
+        "id": "usr-1790396389628",
+        "name": "lakshan",
+        "phone": "+91967438538",
+        "blood": "A+",
+        "eta": "15 mins",
+        "respondedAt": "2026-09-26T04:19:58.691Z"
+      }
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif-1790396398691",
+      "title": "❤️ Verified Donor Responded!",
+      "message": "lakshan (A+) has accepted your emergency request for SURIYA HOSPITAL,UKKADAM,COIMBATORE and is en route! (ETA: 15 mins)",
+      "time": "Just now",
+      "type": "matches",
+      "unread": true,
+      "targetRoles": [
+        "requester"
+      ],
+      "reqId": "req-1790396173600"
+    },
+    {
+      "id": "notif-1790396173600",
+      "title": "🚨 Urgent A+ Blood Request",
+      "message": "SURIYA HOSPITAL,UKKADAM,COIMBATORE urgently needs 1 unit(s) of A+ blood. Compatible donors requested immediately.",
+      "time": "Just now",
+      "type": "emergency",
+      "unread": true,
+      "targetRoles": [
+        "donor"
+      ],
+      "targetBloodGroups": [
+        "A+",
+        "A-",
+        "O+",
+        "O-"
+      ],
+      "reqId": "req-1790396173600",
+      "creatorId": "usr-1790396085483"
+    }
+  ]
+}

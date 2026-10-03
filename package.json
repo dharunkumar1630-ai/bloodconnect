@@ -1,0 +1,29 @@
+{
+  "name": "bloodconnect",
+  "version": "1.0.0",
+  "description": "BloodConnect - Instant Real-Time Blood Emergency Network & Donor Matching System",
+  "main": "serve.js",
+  "scripts": {
+    "start": "node serve.js",
+    "dev": "node serve.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dharunkumar1630-ai/BloodConnet.git"
+  },
+  "keywords": [
+    "blood-donation",
+    "emergency-network",
+    "donor-matching",
+    "healthcare",
+    "real-time",
+    "sse",
+    "javascript"
+  ],
+  "author": "Dharun Kumar",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dharunkumar1630-ai/BloodConnet/issues"
+  },
+  "homepage": "https://github.com/dharunkumar1630-ai/BloodConnet#readme"
+}
