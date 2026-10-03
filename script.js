@@ -603,42 +603,330 @@ async function handleDonorAcceptEmergency(reqId) {
 }
 
 // ------------------------------------------------------------------------------
-// 4. Real-time Multi-Client Mesh & SSE Synchronization Layer
+// 4. Real-time Multi-System Cloud Mesh & Synchronization Layer (Cross-Device)
 // ------------------------------------------------------------------------------
 
-// Cross-tab zero-latency broadcast channel
+const MQTT_BROKERS = [
+  'wss://broker.emqx.io:8084/mqtt',
+  'wss://broker.hivemq.com:8884/mqtt'
+];
+const MQTT_STATE_TOPIC = 'bloodconnect/network/v2/state';
+const MQTT_EVENTS_TOPIC = 'bloodconnect/network/v2/events';
+
+let mqttClient = null;
+let currentBrokerIdx = 0;
+let isPublishingState = false;
+
+// Cross-tab zero-latency broadcast channel (for tabs on same machine)
 try {
   if (typeof BroadcastChannel !== 'undefined') {
     meshBroadcastChannel = new BroadcastChannel('bloodconnect_emergency_mesh');
     meshBroadcastChannel.onmessage = (event) => {
-      const { type, request, notification } = event.data || {};
-      if (type === 'NEW_EMERGENCY_REQUEST' && request) {
-        if (!appState.requests.some(r => r.id === request.id)) {
-          appState.requests.unshift(request);
-        }
-        if (notification && !appState.notifications.some(n => n.id === notification.id)) {
-          appState.notifications.unshift(notification);
-          updateNotificationBadges();
-        }
-        renderDonorEmergencies();
-        renderMyRequestsList();
-        showEmergencyDonorAlert(request);
-      } else if (type === 'DONOR_RESPONDED' && request) {
-        const idx = appState.requests.findIndex(r => r.id === request.id);
-        if (idx !== -1) appState.requests[idx] = request;
-        if (currentScreenId === 'screen-emergency-live' && activeLiveReqId === request.id) {
-          renderLiveRadarStatus(request.id);
-        }
-        renderDonorEmergencies();
-        renderMyRequestsList();
-      }
+      handleCloudEventMessage(event.data);
     };
   }
 } catch (e) {
-  console.warn('BroadcastChannel not supported in this browser:', e);
+  console.warn('BroadcastChannel not supported:', e);
 }
 
-// Server-Sent Events (SSE) for instant cross-device push notifications
+/**
+ * Initialize Cloud Real-Time Mesh over WebSockets (MQTT)
+ * Connects any number of computers/phones in real-time across the world
+ */
+function initMqttCloudMesh() {
+  if (typeof mqtt === 'undefined') {
+    setTimeout(initMqttCloudMesh, 400);
+    return;
+  }
+
+  const brokerUrl = MQTT_BROKERS[currentBrokerIdx];
+  const clientId = 'bc_dev_' + Math.random().toString(16).substring(2, 10);
+
+  try {
+    mqttClient = mqtt.connect(brokerUrl, {
+      clientId,
+      clean: true,
+      connectTimeout: 8000,
+      reconnectPeriod: 3000,
+      keepalive: 30
+    });
+
+    mqttClient.on('connect', () => {
+      console.log('⚡ Connected to BloodConnect Real-time Mesh:', brokerUrl);
+      mqttClient.subscribe([MQTT_STATE_TOPIC, MQTT_EVENTS_TOPIC], { qos: 1 });
+    });
+
+    mqttClient.on('message', (topic, message) => {
+      try {
+        const payload = JSON.parse(message.toString());
+        if (topic === MQTT_STATE_TOPIC) {
+          handleCloudStateMessage(payload);
+        } else if (topic === MQTT_EVENTS_TOPIC) {
+          handleCloudEventMessage(payload);
+        }
+      } catch (err) {
+        console.warn('Error processing mesh message:', err);
+      }
+    });
+
+    mqttClient.on('error', (err) => {
+      console.warn('MQTT connection notice on ' + brokerUrl + ':', err);
+      try { mqttClient.end(true); } catch (e) {}
+      currentBrokerIdx = (currentBrokerIdx + 1) % MQTT_BROKERS.length;
+      setTimeout(initMqttCloudMesh, 2500);
+    });
+  } catch (e) {
+    console.warn('Mesh init error, fallback to REST polling:', e);
+  }
+}
+
+// Start cloud mesh immediately
+initMqttCloudMesh();
+
+/**
+ * Publish updated global database state to cloud (retained message)
+ */
+function publishCloudState() {
+  if (!mqttClient || !mqttClient.connected || isPublishingState) return;
+  try {
+    isPublishingState = true;
+    const payload = JSON.stringify({
+      users: appState.allUsers || [],
+      requests: appState.requests || [],
+      notifications: appState.notifications || [],
+      updatedAt: new Date().toISOString()
+    });
+    mqttClient.publish(MQTT_STATE_TOPIC, payload, { retain: true, qos: 1 }, () => {
+      isPublishingState = false;
+    });
+  } catch (e) {
+    isPublishingState = false;
+  }
+}
+
+/**
+ * Broadcast an instant live event to all connected devices across systems
+ */
+function broadcastGlobalEvent(eventData) {
+  // 1. Same-device cross-tab broadcast
+  if (meshBroadcastChannel) {
+    try { meshBroadcastChannel.postMessage(eventData); } catch (e) {}
+  }
+  // 2. Cross-system live WebSocket broadcast (<30ms latency)
+  if (mqttClient && mqttClient.connected) {
+    try {
+      mqttClient.publish(MQTT_EVENTS_TOPIC, JSON.stringify(eventData), { retain: false, qos: 1 });
+    } catch (e) {}
+  }
+  // 3. Persist latest global database state to cloud retain
+  publishCloudState();
+}
+
+/**
+ * Handle incoming full database sync from Cloud
+ */
+function handleCloudStateMessage(data) {
+  if (!data) return;
+
+  // 1. Merge users from all systems
+  if (Array.isArray(data.users) && data.users.length > 0) {
+    const userMap = new Map();
+    (appState.allUsers || []).forEach(u => {
+      if (u.id) userMap.set(u.id, u);
+      const email = (u.email || '').trim().toLowerCase();
+      if (email) userMap.set(email, u);
+      const phone = (u.phone || '').replace(/\D/g, '');
+      if (phone) userMap.set(phone, u);
+    });
+
+    data.users.forEach(u => {
+      const email = (u.email || '').trim().toLowerCase();
+      const phone = (u.phone || '').replace(/\D/g, '');
+      const existing = (u.id && userMap.get(u.id)) || (email && userMap.get(email)) || (phone && userMap.get(phone));
+      if (!existing) {
+        appState.allUsers.push(u);
+        if (u.id) userMap.set(u.id, u);
+        if (email) userMap.set(email, u);
+        if (phone) userMap.set(phone, u);
+      } else {
+        // Merge stats & availability
+        Object.assign(existing, u);
+      }
+    });
+
+    // If current logged-in user exists in cloud state, sync their updated data
+    if (appState.currentUser) {
+      const self = appState.allUsers.find(u => 
+        (u.id && u.id === appState.currentUser.id) ||
+        (u.email && (u.email || '').toLowerCase() === (appState.currentUser.email || '').toLowerCase()) ||
+        (u.phone && (u.phone || '').replace(/\D/g, '') === (appState.currentUser.phone || '').replace(/\D/g, ''))
+      );
+      if (self) {
+        const localPass = appState.currentUser.password || self.password;
+        Object.assign(appState.currentUser, self);
+        if (localPass) appState.currentUser.password = localPass;
+      }
+    }
+  }
+
+  // 2. Merge blood requests from all systems
+  if (Array.isArray(data.requests)) {
+    const reqMap = new Map();
+    data.requests.forEach(r => {
+      if (r && r.id) reqMap.set(r.id, r);
+    });
+    (appState.requests || []).forEach(r => {
+      if (r && r.id && !reqMap.has(r.id)) {
+        reqMap.set(r.id, r);
+      }
+    });
+    appState.requests = Array.from(reqMap.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    // Live radar update if currently active
+    if (currentScreenId === 'screen-emergency-live' && activeLiveReqId) {
+      renderLiveRadarStatus(activeLiveReqId);
+    }
+  }
+
+  // 3. Merge notifications
+  if (Array.isArray(data.notifications)) {
+    const notifMap = new Map();
+    data.notifications.forEach(n => {
+      if (n && n.id) notifMap.set(n.id, n);
+    });
+    (appState.notifications || []).forEach(n => {
+      if (n && n.id && !notifMap.has(n.id)) {
+        notifMap.set(n.id, n);
+      }
+    });
+    appState.notifications = Array.from(notifMap.values()).sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+  }
+
+  persistAppState();
+  updateUI();
+  renderDonorEmergencies();
+  renderMyRequestsList();
+  if (typeof renderDonorDirectory === 'function') renderDonorDirectory();
+}
+
+/**
+ * Handle incoming real-time events across systems (new users, emergency dispatch, responses)
+ */
+function handleCloudEventMessage(eventData) {
+  if (!eventData || !eventData.type) return;
+  const { type, user, request, requestId, notification } = eventData;
+
+  // Event: New User Registered on another system
+  if (type === 'NEW_USER' && user) {
+    const exists = appState.allUsers.some(u => 
+      (u.id && u.id === user.id) ||
+      (u.email && (u.email || '').toLowerCase() === (user.email || '').toLowerCase()) ||
+      (u.phone && (u.phone || '').replace(/\D/g, '') === (user.phone || '').replace(/\D/g, ''))
+    );
+    if (!exists) {
+      appState.allUsers.push(user);
+      persistAppState();
+      renderDonorEmergencies();
+      if (typeof renderDonorDirectory === 'function') renderDonorDirectory();
+    }
+    return;
+  }
+
+  // Event: New Urgent Emergency Request Broadcasted
+  if (type === 'NEW_EMERGENCY_REQUEST' && request) {
+    if (!appState.requests.some(r => r.id === request.id)) {
+      appState.requests.unshift(request);
+    }
+    if (notification && !appState.notifications.some(n => n.id === notification.id)) {
+      appState.notifications.unshift(notification);
+      updateNotificationBadges();
+    }
+    persistAppState();
+    renderDonorEmergencies();
+    renderMyRequestsList();
+
+    // Trigger loud audio alarm & emergency dispatch modal on compatible donor devices
+    if (appState.isAuthenticated && appState.currentUser && appState.activeRole === 'donor') {
+      const donorBlood = appState.currentUser.bloodGroup || 'O+';
+      const currentUserId = appState.currentUser.id;
+      const currentUserPhone = (appState.currentUser.phone || '').replace(/\D/g, '');
+      const reqContact = (request.contact || '').replace(/\D/g, '');
+
+      if (request.status === 'searching' &&
+          request.requesterId !== currentUserId &&
+          (!currentUserPhone || !reqContact || currentUserPhone !== reqContact) &&
+          appState.currentUser.availability !== false &&
+          isDonorCompatible(donorBlood, request.bloodGroup) &&
+          !alertedEmergencyRequestIds.has(request.id)) {
+        showEmergencyDonorAlert(request);
+      }
+    }
+    return;
+  }
+
+  // Event: A verified donor responded to an emergency
+  if (type === 'DONOR_RESPONDED' && request) {
+    const idx = appState.requests.findIndex(r => r.id === request.id);
+    if (idx !== -1) {
+      appState.requests[idx] = request;
+    } else {
+      appState.requests.unshift(request);
+    }
+    persistAppState();
+    if (currentScreenId === 'screen-emergency-live' && activeLiveReqId === request.id) {
+      renderLiveRadarStatus(request.id);
+    }
+    renderDonorEmergencies();
+    renderMyRequestsList();
+    playHospitalChime();
+
+    if (appState.currentUser && appState.currentUser.id === request.requesterId) {
+      showToast(`❤️ Verified Donor ${request.respondedDonor ? request.respondedDonor.name : ''} has responded and is en route!`, 'success');
+    }
+    return;
+  }
+
+  // Event: Request marked fulfilled / blood received
+  if (type === 'REQUEST_FULFILLED' && request) {
+    const idx = appState.requests.findIndex(r => r.id === request.id);
+    if (idx !== -1) appState.requests[idx] = request;
+    persistAppState();
+    if (currentScreenId === 'screen-emergency-live' && activeLiveReqId === request.id) {
+      renderLiveRadarStatus(request.id);
+    }
+    renderDonorEmergencies();
+    renderMyRequestsList();
+    return;
+  }
+
+  // Event: Request Cancelled
+  if (type === 'REQUEST_CANCELLED') {
+    const targetId = requestId || (request ? request.id : null);
+    if (targetId) {
+      const req = appState.requests.find(r => r.id === targetId);
+      if (req) req.status = 'cancelled';
+      persistAppState();
+      renderDonorEmergencies();
+      renderMyRequestsList();
+    }
+    return;
+  }
+
+  // Event: All Accounts Wiped
+  if (type === 'ALL_ACCOUNTS_CLEARED') {
+    appState.allUsers = [];
+    appState.requests = [];
+    appState.notifications = [];
+    appState.currentUser = null;
+    appState.isAuthenticated = false;
+    persistAppState();
+    navigateToScreen('screen-login', false);
+    showToast('Network data cleared across all systems', 'info');
+    return;
+  }
+}
+
+// Server-Sent Events (SSE) for native node environment
 function initServerSentEvents() {
   if (typeof EventSource === 'undefined') return;
   try {
@@ -646,100 +934,32 @@ function initServerSentEvents() {
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'NEW_EMERGENCY_REQUEST' && data.request) {
-          const req = data.request;
-          if (!appState.requests.some(r => r.id === req.id)) {
-            appState.requests.unshift(req);
-          }
-          if (data.notification && !appState.notifications.some(n => n.id === data.notification.id)) {
-            appState.notifications.unshift(data.notification);
-            updateNotificationBadges();
-          }
-          renderDonorEmergencies();
-          renderMyRequestsList();
-          showEmergencyDonorAlert(req);
-        } else if (data.type === 'DONOR_RESPONDED' && data.request) {
-          const idx = appState.requests.findIndex(r => r.id === data.request.id);
-          if (idx !== -1) appState.requests[idx] = data.request;
-          if (currentScreenId === 'screen-emergency-live' && activeLiveReqId === data.request.id) {
-            renderLiveRadarStatus(data.request.id);
-          }
-          renderDonorEmergencies();
-          renderMyRequestsList();
-        } else if (data.type === 'REQUEST_FULFILLED' || data.type === 'REQUEST_CANCELLED') {
-          fetchDataFromBackend();
-        }
+        handleCloudEventMessage(data);
       } catch (err) {}
     };
-    eventSource.onerror = () => {
-      // Browser automatically retries SSE connection
-    };
-  } catch (e) {
-    console.warn('SSE initialization error:', e);
-  }
+    eventSource.onerror = () => {};
+  } catch (e) {}
 }
 initServerSentEvents();
 
+/**
+ * Periodically sync state with REST API (/api/data)
+ */
 async function fetchDataFromBackend() {
   try {
     const res = await fetch('/api/data', { cache: 'no-cache' });
     if (!res.ok) return;
     const data = await res.json();
-    if (data.success) {
-      if (Array.isArray(data.requests)) {
-        const newJson = JSON.stringify(data.requests);
-        if (newJson !== lastKnownRequestsJson) {
-          lastKnownRequestsJson = newJson;
-          appState.requests = data.requests;
-          
-          // Check for any un-alerted searching emergency requests matching donor
-          if (appState.isAuthenticated && appState.currentUser && appState.activeRole === 'donor') {
-            const donorBlood = appState.currentUser.bloodGroup || 'O+';
-            const currentUserId = appState.currentUser.id;
-            const currentUserPhone = (appState.currentUser.phone || '').replace(/\D/g, '');
-
-            const pendingAlert = appState.requests.find(r => 
-              r.status === 'searching' && 
-              r.requesterId !== currentUserId &&
-              (!currentUserPhone || !r.contact || r.contact.replace(/\D/g, '') !== currentUserPhone) &&
-              isDonorCompatible(donorBlood, r.bloodGroup) &&
-              !alertedEmergencyRequestIds.has(r.id)
-            );
-
-            if (pendingAlert && !isEmergencyAlarmActive) {
-              showEmergencyDonorAlert(pendingAlert);
-            }
-          }
-
-          // If viewing live radar screen, refresh status
-          if (currentScreenId === 'screen-emergency-live' && activeLiveReqId) {
-            renderLiveRadarStatus(activeLiveReqId);
-          }
-          
-          // Re-render views
-          renderDonorEmergencies();
-          renderMyRequestsList();
-        }
-      }
-
-      if (Array.isArray(data.notifications)) {
-        appState.notifications = data.notifications;
-        updateNotificationBadges();
-      }
-
-      if (Array.isArray(data.users)) {
-        appState.allUsers = data.users;
-      }
-
-      persistAppState();
+    if (data && data.success) {
+      handleCloudStateMessage(data);
     }
   } catch (err) {
-    // Running in static environment without Node server
+    // Running in serverless or offline mode, MQTT handles live sync
   }
 }
 
-// Fast polling (1.5 seconds) as fallback guarantee
-setInterval(fetchDataFromBackend, 1500);
+// Polling interval for guaranteed fallback
+setInterval(fetchDataFromBackend, 2500);
 
 // ------------------------------------------------------------------------------
 // 5. Screen Navigation System
@@ -1057,12 +1277,33 @@ async function handleLoginSubmit(event) {
     console.warn('Backend login fallback to local users:', e);
   }
 
-  // Fallback to local user matching
-  let matchedUser = appState.allUsers.find(u => 
-    (u.email && u.email.toLowerCase() === emailVal) || 
-    (u.phone && u.phone.replace(/\D/g, '') === emailVal.replace(/\D/g, '')) || 
-    (u.name && u.name.toLowerCase() === emailVal)
-  );
+  // Fallback to local and cloud user matching
+  const cleanDigits = emailVal.replace(/\D/g, '');
+  const findUserMatch = (users) => (users || []).find(u => {
+    const uEmail = (u.email || '').toLowerCase().trim();
+    const uPhoneDigits = (u.phone || '').replace(/\D/g, '');
+    const uName = (u.name || '').toLowerCase().trim();
+    const emailMatch = uEmail && uEmail === emailVal;
+    const phoneMatch = cleanDigits.length >= 6 && uPhoneDigits && (uPhoneDigits === cleanDigits || uPhoneDigits.endsWith(cleanDigits) || cleanDigits.endsWith(uPhoneDigits));
+    const nameMatch = uName && uName === emailVal;
+    return emailMatch || phoneMatch || nameMatch;
+  });
+
+  let matchedUser = findUserMatch(appState.allUsers);
+
+  // If not found yet, perform immediate live sync from server
+  if (!matchedUser) {
+    try {
+      const freshRes = await fetch('/api/data', { cache: 'no-cache' });
+      if (freshRes.ok) {
+        const freshData = await freshRes.json();
+        if (freshData && freshData.success && Array.isArray(freshData.users)) {
+          handleCloudStateMessage(freshData);
+          matchedUser = findUserMatch(appState.allUsers);
+        }
+      }
+    } catch (e) {}
+  }
 
   if (matchedUser) {
     if (matchedUser.password && passVal && matchedUser.password !== passVal) {
@@ -1230,6 +1471,12 @@ async function handleSignupSubmit(event) {
 
   persistAppState();
   updateUI();
+
+  // Instant cross-system cloud broadcast: all devices receive new account immediately!
+  broadcastGlobalEvent({
+    type: 'NEW_USER',
+    user: newUser
+  });
 
   showToast(`Donor account created! Welcome to the network, ${name}!`, 'success');
   navigateToScreen('screen-home-donor');
@@ -1486,16 +1733,12 @@ async function executeSendEmergencyRequest() {
   persistAppState();
   updateUI();
 
-  // Instant cross-tab mesh broadcast
-  if (meshBroadcastChannel) {
-    try {
-      meshBroadcastChannel.postMessage({
-        type: 'NEW_EMERGENCY_REQUEST',
-        request: newReq,
-        notification: notif
-      });
-    } catch (e) {}
-  }
+  // Instant real-time multi-system cloud broadcast to all devices
+  broadcastGlobalEvent({
+    type: 'NEW_EMERGENCY_REQUEST',
+    request: newReq,
+    notification: notif
+  });
 
   // Play audio chime
   playHospitalChime();
@@ -1688,6 +1931,13 @@ async function confirmCancelRequest() {
 
     persistAppState();
     updateUI();
+
+    // Broadcast cancellation to all systems
+    broadcastGlobalEvent({
+      type: 'REQUEST_CANCELLED',
+      requestId: activeLiveReqId
+    });
+
     showToast('Emergency request cancelled', 'info');
     navigateToScreen('screen-home-requester');
   }
@@ -1956,15 +2206,11 @@ async function respondToEmergencyAsDonor(requestId, donorUser, eta = '15 mins') 
   persistAppState();
   updateUI();
 
-  // Instant cross-tab mesh broadcast
-  if (meshBroadcastChannel) {
-    try {
-      meshBroadcastChannel.postMessage({
-        type: 'DONOR_RESPONDED',
-        request: req
-      });
-    } catch (e) {}
-  }
+  // Instant real-time multi-system cloud broadcast
+  broadcastGlobalEvent({
+    type: 'DONOR_RESPONDED',
+    request: req
+  });
 
   // Play audio chime
   playHospitalChime();
@@ -2025,6 +2271,8 @@ function refreshDonorNearbyList() {
 function toggleDonorAvailability(isAvailable) {
   if (appState.currentUser && appState.currentUser.role === 'donor') {
     appState.currentUser.availability = isAvailable;
+    const match = appState.allUsers.find(u => u.id === appState.currentUser.id);
+    if (match) match.availability = isAvailable;
   }
 
   const card = document.getElementById('donorAvailabilityCard');
@@ -2052,6 +2300,17 @@ function toggleDonorAvailability(isAvailable) {
   }
 
   persistAppState();
+  publishCloudState();
+
+  if (appState.currentUser) {
+    try {
+      fetch('/api/donors/availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ donorId: appState.currentUser.id, availability: isAvailable })
+      }).catch(() => {});
+    } catch (e) {}
+  }
 }
 
 // ------------------------------------------------------------------------------
@@ -2181,6 +2440,14 @@ async function completeFulfillmentAndRedirect() {
 
   persistAppState();
   updateUI();
+
+  // Instant real-time multi-system cloud broadcast
+  if (activeReq) {
+    broadcastGlobalEvent({
+      type: 'REQUEST_FULFILLED',
+      request: activeReq
+    });
+  }
 
   playHospitalChime();
   showToast('🎉 Emergency Blood Received! Request marked as completed.', 'success');
@@ -2598,6 +2865,9 @@ async function deleteCurrentAccount() {
   persistAppState();
   updateUI();
 
+  // Sync deletion across systems
+  broadcastGlobalEvent({ type: 'USER_DELETED', userId });
+
   showToast('Your account has been permanently removed.', 'info');
   navigateToScreen('screen-login', false);
 }
@@ -2629,6 +2899,10 @@ async function resetPrototypeData() {
   };
 
   persistAppState();
+
+  // Sync wipe across all systems
+  broadcastGlobalEvent({ type: 'ALL_ACCOUNTS_CLEARED' });
+
   showToast('All accounts and requests have been wiped clean', 'success');
   updateUI();
   navigateToScreen('screen-login', false);

@@ -25,5 +25,8 @@
   "bugs": {
     "url": "https://github.com/dharunkumar1630-ai/BloodConnet/issues"
   },
-  "homepage": "https://github.com/dharunkumar1630-ai/BloodConnet#readme"
+  "homepage": "https://github.com/dharunkumar1630-ai/BloodConnet#readme",
+  "dependencies": {
+    "mqtt": "^5.16.0"
+  }
 }
