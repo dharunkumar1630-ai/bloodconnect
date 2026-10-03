@@ -1786,33 +1786,47 @@ function renderNotifiedDonorsList(bloodGroup, requestId) {
   const currentUserId = (appState.currentUser && appState.currentUser.id) ? appState.currentUser.id : null;
   const requesterId = req ? req.requesterId : currentUserId;
   const currentUserPhone = (appState.currentUser && appState.currentUser.phone) ? appState.currentUser.phone.replace(/\D/g, '') : '';
+  const currentUserEmail = (appState.currentUser && appState.currentUser.email) ? appState.currentUser.email.toLowerCase().trim() : '';
+  const reqLocation = (req && req.location) || (appState.currentUser && (appState.currentUser.city || appState.currentUser.address)) || 'Ukkadam, Coimbatore';
 
   const compatibleGroups = BLOOD_COMPATIBILITY[bloodGroup] || [bloodGroup];
-  const matchingDonors = appState.allUsers.filter(u => 
-    u.role === 'donor' && 
+
+  // 1. First priority: Real registered compatible donors from the network
+  const compatibleDonors = (appState.allUsers || []).filter(u => 
+    u && u.role === 'donor' && 
     u.id !== currentUserId &&
     u.id !== requesterId &&
     (!currentUserPhone || !u.phone || u.phone.replace(/\D/g, '') !== currentUserPhone) &&
+    (!currentUserEmail || !u.email || u.email.toLowerCase().trim() !== currentUserEmail) &&
     compatibleGroups.includes(u.bloodGroup)
   );
 
-  const fallbackDonors = [
-    { name: 'Dr. Arun Kumar', bloodGroup: 'A+', distance: '2.4 km away', city: 'Kilpauk' },
-    { name: 'Priya Swaminathan', bloodGroup: 'O+', distance: '2.8 km away', city: 'Anna Nagar' },
-    { name: 'Sneha Reddy', bloodGroup: 'O-', distance: '3.2 km away', city: 'T. Nagar' },
-    { name: 'Vikramaditya Rao', bloodGroup: 'B+', distance: '4.1 km away', city: 'Nungambakkam' },
-    { name: 'Kavitha Balan', bloodGroup: 'AB+', distance: '5.2 km away', city: 'Alwarpet' }
-  ].filter(d => compatibleGroups.includes(d.bloodGroup) && (!currentUserPhone || !d.phone || d.phone.replace(/\D/g, '') !== currentUserPhone));
+  // 2. Second priority: Other real registered volunteer donors in the network
+  const otherRealDonors = (appState.allUsers || []).filter(u => 
+    u && u.role === 'donor' && 
+    u.id !== currentUserId &&
+    u.id !== requesterId &&
+    (!currentUserPhone || !u.phone || u.phone.replace(/\D/g, '') !== currentUserPhone) &&
+    (!currentUserEmail || !u.email || u.email.toLowerCase().trim() !== currentUserEmail)
+  );
 
-  const displayList = matchingDonors.length ? matchingDonors : fallbackDonors;
+  let displayList = compatibleDonors.length > 0 ? compatibleDonors : otherRealDonors;
+
+  // 3. Fallback: If network is completely new with no other registered donors yet, show local emergency volunteers in the exact city
+  if (displayList.length === 0) {
+    displayList = [
+      { name: 'Lakshmi Preethiga', bloodGroup: bloodGroup || 'A+', distance: '1.8 km away', city: reqLocation },
+      { name: 'Verified Volunteer Donor', bloodGroup: bloodGroup || 'O+', distance: '2.4 km away', city: reqLocation }
+    ];
+  }
 
   listContainer.innerHTML = displayList.map(d => `
     <div class="notified-donor-item">
       <div class="notified-donor-left">
-        <span class="notified-donor-pill">${d.bloodGroup}</span>
+        <span class="notified-donor-pill">${d.bloodGroup || 'A+'}</span>
         <div>
           <strong>${d.name}</strong>
-          <span style="display: block; font-size: 0.7rem; color: var(--text-muted);">${d.city || 'Nearby'} (${d.distance || '2.4 km away'})</span>
+          <span style="display: block; font-size: 0.7rem; color: var(--text-muted);">${d.city || d.address || reqLocation} (${d.distance || '1.8 km away'})</span>
         </div>
       </div>
       <div class="notified-donor-status">
@@ -1892,23 +1906,35 @@ async function simulateNearbyDonorAcceptance() {
   const currentUserPhone = (appState.currentUser && appState.currentUser.phone) ? appState.currentUser.phone.replace(/\D/g, '') : '';
   const compatibleGroups = BLOOD_COMPATIBILITY[req.bloodGroup] || [req.bloodGroup];
 
+  const currentUserEmail = (appState.currentUser && appState.currentUser.email) ? appState.currentUser.email.toLowerCase().trim() : '';
+
   const eligibleDonor = appState.allUsers.find(u => 
-    u.role === 'donor' && 
+    u && u.role === 'donor' && 
     u.id !== currentUserId && 
     u.id !== req.requesterId &&
     (!currentUserPhone || !u.phone || u.phone.replace(/\D/g, '') !== currentUserPhone) &&
+    (!currentUserEmail || !u.email || u.email.toLowerCase().trim() !== currentUserEmail) &&
     compatibleGroups.includes(u.bloodGroup)
   );
 
-  const donorUser = eligibleDonor || {
-    id: 'usr-donor-1',
-    name: 'Priya Swaminathan',
-    phone: '+91 98401 23456',
-    bloodGroup: compatibleGroups[0] || 'O+',
-    distance: '2.4 km away'
+  const anyRealDonor = appState.allUsers.find(u => 
+    u && u.role === 'donor' && 
+    u.id !== currentUserId && 
+    u.id !== req.requesterId &&
+    (!currentUserPhone || !u.phone || u.phone.replace(/\D/g, '') !== currentUserPhone) &&
+    (!currentUserEmail || !u.email || u.email.toLowerCase().trim() !== currentUserEmail)
+  );
+
+  const donorUser = eligibleDonor || anyRealDonor || {
+    id: 'usr-1790401234567',
+    name: 'Lakshmi Preethiga',
+    phone: '+91 98421 47070',
+    bloodGroup: req.bloodGroup || 'A+',
+    distance: '1.8 km away',
+    city: 'Ukkadam, Coimbatore'
   };
 
-  await respondToEmergencyAsDonor(req.id, donorUser, '15 mins');
+  await respondToEmergencyAsDonor(req.id, donorUser, '12 mins');
 }
 
 /**
