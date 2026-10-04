@@ -181,6 +181,9 @@ const server = http.createServer(async (req, res) => {
       });
 
       if (user) {
+        if (user.age && parseInt(user.age, 10) < 18) {
+          return sendJson(res, 403, { success: false, message: 'Access Restricted: Only individuals aged 18 and above are eligible to access BloodConnect.' });
+        }
         if (user.password && password && user.password !== password) {
           return sendJson(res, 401, { success: false, message: 'Incorrect password. Please verify and try again.' });
         }
@@ -225,10 +228,15 @@ const server = http.createServer(async (req, res) => {
   if (rawUrl === '/api/auth/register' && req.method === 'POST') {
     try {
       const data = await parseJsonBody(req);
+      const userAge = parseInt(data.age, 10);
+      if (isNaN(userAge) || userAge < 18) {
+        return sendJson(res, 400, { success: false, message: 'Access Restricted: You must be at least 18 years old to access and register on BloodConnect.' });
+      }
+
       const newUser = {
         id: `usr-${Date.now()}`,
         name: data.name || 'Anonymous User',
-        age: data.age ? parseInt(data.age, 10) : 25,
+        age: userAge,
         email: (data.email || `user${Date.now()}@bloodconnect.org`).toLowerCase(),
         phone: data.phone || '+91 90000 00000',
         address: data.address || '',

@@ -1234,6 +1234,42 @@ function validateSignupPasswords() {
 }
 
 /**
+ * Real-time Validation for Signup Age (18+ Requirement)
+ */
+function validateSignupAge() {
+  const ageInput = document.getElementById('signupAge');
+  const hint = document.getElementById('signupAgeHint');
+  if (!ageInput) return;
+  const val = parseInt(ageInput.value, 10);
+  if (!ageInput.value || isNaN(val)) {
+    if (hint) {
+      hint.style.color = 'var(--text-muted)';
+      hint.textContent = 'Only users 18 and older are eligible to access.';
+    }
+    return;
+  }
+  if (val < 18) {
+    if (hint) {
+      hint.style.color = '#dc2626';
+      hint.textContent = '❌ Access Restricted: You must be at least 18 years old to access BloodConnect.';
+    }
+    ageInput.style.borderColor = '#dc2626';
+  } else if (val > 75) {
+    if (hint) {
+      hint.style.color = '#dc2626';
+      hint.textContent = '⚠️ Age must be 75 or below for active donor eligibility.';
+    }
+    ageInput.style.borderColor = '#dc2626';
+  } else {
+    if (hint) {
+      hint.style.color = '#16a34a';
+      hint.textContent = '✓ Age verified (18+ eligible for access).';
+    }
+    ageInput.style.borderColor = '';
+  }
+}
+
+/**
  * Handle Login Form Submit (Unified Single Login for Both Donors and Requesters)
  */
 async function handleLoginSubmit(event) {
@@ -1258,6 +1294,12 @@ async function handleLoginSubmit(event) {
     const data = await res.json().catch(() => ({}));
 
     if (res.ok && data.success && data.user) {
+      // Enforce age limit (18+)
+      if (data.user.age && parseInt(data.user.age, 10) < 18) {
+        showToast('Access Restricted: Only individuals aged 18 and above are eligible to access BloodConnect.', 'emergency');
+        return;
+      }
+
       appState.currentUser = data.user;
       appState.activeRole = data.user.role || 'donor';
       appState.isAuthenticated = true;
@@ -1268,6 +1310,9 @@ async function handleLoginSubmit(event) {
       showToast(`Welcome back, ${data.user.name}!`, 'success');
       const targetScreen = appState.activeRole === 'requester' ? 'screen-home-requester' : 'screen-home-donor';
       navigateToScreen(targetScreen);
+      return;
+    } else if (res.status === 403) {
+      showToast(data.message || 'Access Restricted: Only individuals aged 18 and above are eligible to access BloodConnect.', 'emergency');
       return;
     } else if (res.status === 401) {
       showToast(data.message || 'Invalid credentials or wrong password.', 'emergency');
@@ -1306,6 +1351,11 @@ async function handleLoginSubmit(event) {
   }
 
   if (matchedUser) {
+    if (matchedUser.age && parseInt(matchedUser.age, 10) < 18) {
+      showToast('Access Restricted: Only individuals aged 18 and above are eligible to access BloodConnect.', 'emergency');
+      return;
+    }
+
     if (matchedUser.password && passVal && matchedUser.password !== passVal) {
       showToast('Incorrect password. Please check and try again.', 'emergency');
       if (passInput) passInput.focus();
@@ -1377,8 +1427,17 @@ async function handleSignupSubmit(event) {
   }
 
   const ageNum = parseInt(age, 10);
-  if (isNaN(ageNum) || ageNum < 18 || ageNum > 75) {
-    showToast('Age must be between 18 and 75 years for blood network eligibility.', 'emergency');
+  if (isNaN(ageNum) || ageNum < 18) {
+    showToast('Access Restricted: You must be at least 18 years old to access and register on BloodConnect.', 'emergency');
+    if (ageInput) {
+      ageInput.focus();
+      ageInput.style.borderColor = '#dc2626';
+    }
+    return;
+  }
+
+  if (ageNum > 75) {
+    showToast('Blood donation safety guidelines require donors to be 75 years of age or younger.', 'emergency');
     if (ageInput) ageInput.focus();
     return;
   }
@@ -1458,6 +1517,10 @@ async function handleSignupSubmit(event) {
       if (data.user && data.user.id) {
         newUser.id = data.user.id;
       }
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      showToast(errData.message || 'Registration rejected: You must be at least 18 years old to access.', 'emergency');
+      return;
     }
   } catch (e) {
     console.warn('Backend register fallback to local state:', e);

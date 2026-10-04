@@ -16,6 +16,19 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Suppress native browser password reveal eye (Edge / Chrome) to keep single toggle */
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear,
+    input::-ms-reveal,
+    input::-ms-clear {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+  </style>
 </head>
 <body>
 
@@ -260,11 +273,12 @@
               <!-- Age & Mobile Number in 2-Column Row -->
               <div class="form-row-2col">
                 <div class="form-group">
-                  <label class="form-label" for="signupAge">Age <span class="text-danger">*</span></label>
+                  <label class="form-label" for="signupAge">Age (18+ only) <span class="text-danger">*</span></label>
                   <div class="input-with-icon">
                     <i class="fa-solid fa-calendar-days input-icon"></i>
-                    <input type="number" id="signupAge" class="form-input" placeholder="e.g. 24" min="18" max="75" required>
+                    <input type="number" id="signupAge" class="form-input" placeholder="Age (min 18)" min="18" max="75" required oninput="validateSignupAge()">
                   </div>
+                  <small class="form-hint" id="signupAgeHint" style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; display: block;">Only users 18 and older are eligible to access.</small>
                 </div>
 
                 <div class="form-group">
