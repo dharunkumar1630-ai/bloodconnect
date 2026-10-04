@@ -381,15 +381,19 @@ function stopWarningAlarmLoop1() {
  * Runs continuously until the user dismisses the emergency alert.
  */
 function startEmergencyAlarmLoop(requestId) {
+  // CRITICAL: Emergency alarm notification is ONLY for nearby donors, never for the requester
+  if (appState.activeRole === 'requester') return;
+  if (appState.currentUser && appState.currentUser.role === 'requester') return;
+  if (requestId && appState.currentUser) {
+    const req = appState.requests.find(r => r.id === requestId);
+    if (req && req.requesterId === appState.currentUser.id) return;
+  }
+
   isEmergencyAlarmActive = true;
 
   // Add shaking vibration animation to modal sheet
   const sheet = document.getElementById('emergencyModalSheet');
   if (sheet) sheet.classList.add('vibrating');
-
-  // Show live banner alarm dismiss button if active on emergency screen
-  const dismissBtn = document.getElementById('btnDismissLiveAlarm');
-  if (dismissBtn) dismissBtn.style.display = 'inline-flex';
 
   // Update mute button label
   const btnMuteText = document.getElementById('btnMuteEmergencyText');
@@ -427,9 +431,6 @@ function stopEmergencyAlarmLoop() {
     emergencyAlarmInterval = null;
   }
   stopWarningAlarmLoop1();
-
-  const dismissBtn = document.getElementById('btnDismissLiveAlarm');
-  if (dismissBtn) dismissBtn.style.display = 'none';
 
   const sheet = document.getElementById('emergencyModalSheet');
   if (sheet) sheet.classList.remove('vibrating');
@@ -1869,10 +1870,10 @@ async function executeSendEmergencyRequest() {
     notification: notif
   });
 
-  // Trigger continuous "Warning Alarm Loop 1" sound effect until dismissed
-  startEmergencyAlarmLoop(newReq.id);
+  // Play subtle confirmation chime for requester (alarm is only for nearby donors)
+  playHospitalChime();
 
-  showToast(`🚨 Emergency alert broadcasted to compatible donors! Warning Alarm Loop 1 active.`, 'emergency');
+  showToast(`Emergency alert broadcasted to compatible donors! Nearby donors will receive the emergency alarm.`, 'success');
 
   // Navigate to Emergency Live Screen
   navigateToEmergencyLive(newReq.id);
