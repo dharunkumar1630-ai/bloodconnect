@@ -33,14 +33,14 @@
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v16.0.0 or later)
+- [Node.js](https://nodejs.org/) (v18.0.0 or later)
 
 ### Installation & Running Locally
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/dharunkumar1630-ai/BloodConnet.git
-   cd BloodConnet
+   git clone https://github.com/dharunkumar1630-ai/bloodconnect.git
+   cd bloodconnect
    ```
 
 2. **Start the server:**
@@ -57,6 +57,24 @@
    ```
    http://localhost:3000
    ```
+
+---
+
+## ☁️ Deploy to Vercel
+
+This project is fully configured for zero-configuration 1-click deployment on **Vercel** with integrated serverless functions (`api/index.js`) and static frontend asset delivery (`vercel.json`).
+
+### Deploy via Vercel Dashboard:
+1. Go to [vercel.com/new](https://vercel.com/new).
+2. Select and import the repository `dharunkumar1630-ai/bloodconnect`.
+3. Keep default settings (Framework Preset: **Other**, Root Directory: `./`).
+4. Click **Deploy**.
+
+### Deploy via Vercel CLI:
+```bash
+npm i -g vercel
+vercel
+```
 
 ---
 

@@ -15,12 +15,26 @@ const BLOOD_COMPATIBILITY = {
 };
 
 const DB_FILE = path.join(__dirname, '..', 'data.json');
+const TMP_DB_FILE = path.join('/tmp', 'bloodconnect_data.json');
 
 // In-memory DB cache for serverless environments
 let memoryDB = null;
 
 function loadDB() {
   if (memoryDB) return memoryDB;
+
+  // Try reading from /tmp in Vercel lambda containers
+  try {
+    if (fs.existsSync(TMP_DB_FILE)) {
+      const content = fs.readFileSync(TMP_DB_FILE, 'utf-8');
+      memoryDB = JSON.parse(content);
+      if (!Array.isArray(memoryDB.users)) memoryDB.users = [];
+      if (!Array.isArray(memoryDB.requests)) memoryDB.requests = [];
+      if (!Array.isArray(memoryDB.notifications)) memoryDB.notifications = [];
+      return memoryDB;
+    }
+  } catch (e) {}
+
   try {
     if (fs.existsSync(DB_FILE)) {
       const content = fs.readFileSync(DB_FILE, 'utf-8');
@@ -39,6 +53,11 @@ function loadDB() {
 
 function saveDB(db) {
   memoryDB = db;
+  // Try persisting to /tmp (writable in AWS Lambda/Vercel serverless functions)
+  try {
+    fs.writeFileSync(TMP_DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
+  } catch (e) {}
+  // Also try writing to project root (works locally)
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
   } catch (e) {
@@ -97,10 +116,46 @@ module.exports = async (req, res) => {
     return res.end();
   }
 
-  const url = (req.url || '/').split('?')[0];
+  // Support both direct URL invocation and Vercel rewritten URLs
+  let rawUrl = req.headers['x-matched-path'] || req.headers['x-forwarded-url'] || req.headers['x-original-url'] || req.url || '/';
+  let url = rawUrl.split('?')[0];
+
+  // If Vercel rewrote to /api or /api/index.js, extract the sub-route from query parameter
+  if (url === '/api' || url === '/api/' || url === '/api/index.js' || url === '/index.js') {
+    const q = req.query || {};
+    let sub = q.__route;
+    if (!sub && req.url && req.url.includes('__route=')) {
+      try {
+        const parsed = new URL(req.url, 'http://localhost');
+        sub = parsed.searchParams.get('__route');
+      } catch (e) {}
+    }
+    if (sub) {
+      url = '/api/' + (sub.startsWith('/') ? sub.slice(1) : sub);
+    }
+  }
+
+  // Normalize trailing slash
+  if (url.length > 1 && url.endsWith('/')) {
+    url = url.slice(0, -1);
+  }
+
   const db = loadDB();
 
-  // Route: GET /api/status
+  // Route: GET /api/events (SSE stream connection compatibility)
+  if (url === '/api/events' && req.method === 'GET') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*'
+    });
+    res.write('retry: 3000\n\n');
+    res.write(`data: ${JSON.stringify({ type: 'CONNECTED', timestamp: Date.now() })}\n\n`);
+    return res.end();
+  }
+
+  // Route: GET /api/status or /api/health
   if ((url === '/api/status' || url === '/api/health') && req.method === 'GET') {
     return sendJson(res, 200, {
       status: 'online',
@@ -109,6 +164,12 @@ module.exports = async (req, res) => {
       activeRequests: db.requests.filter(r => r.status === 'searching').length,
       timestamp: new Date().toISOString()
     });
+  }
+
+  // Route: GET /api/donors
+  if (url === '/api/donors' && req.method === 'GET') {
+    const donors = db.users.filter(u => u.role === 'donor').map(u => ({ ...u, password: '[PROTECTED]' }));
+    return sendJson(res, 200, { success: true, donors });
   }
 
   // Route: GET /api/data
@@ -407,8 +468,8 @@ module.exports = async (req, res) => {
     }
   }
 
-  // Route: POST /api/donors/availability
-  if (url === '/api/donors/availability' && req.method === 'POST') {
+  // Route: POST /api/donors/availability or /api/donor/availability
+  if ((url === '/api/donors/availability' || url === '/api/donor/availability') && req.method === 'POST') {
     try {
       const { donorId, availability } = await parseJsonBody(req);
       const donor = db.users.find(u => u.id === donorId || u.role === 'donor');
