@@ -766,6 +766,9 @@
               <div class="status-distance-tag">
                 <i class="fa-solid fa-location-dot"></i> <span id="liveDistance">Approximately 2.8 km away</span>
               </div>
+              <button type="button" class="btn-dismiss-alarm" id="btnDismissLiveAlarm" onclick="stopEmergencyAlarmLoop(); this.style.display='none'; showToast('Warning Alarm Loop 1 dismissed.', 'info');" style="display: none;">
+                <i class="fa-solid fa-bell-slash"></i> Dismiss "Warning Alarm Loop 1"
+              </button>
             </div>
 
             <!-- Emergency Live Grid (Radar on Left, Milestones & Match on Right) -->
@@ -968,7 +971,7 @@
                     </div>
                   </div>
                   <button type="button" class="btn-secondary-sm" onclick="testEmergencyAlertSound()" style="font-size: 0.8rem; padding: 8px 16px; background: #ffffff; border: 1.5px solid #dc2626; color: #dc2626; font-weight: 800; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);">
-                    <i class="fa-solid fa-play"></i> Test Vibrating Sound
+                    <i class="fa-solid fa-play"></i> Test "Warning Alarm Loop 1"
                   </button>
                 </div>
 
@@ -1436,6 +1439,9 @@
           <i class="fa-regular fa-hourglass-half"></i>
           <span id="countdownTimerText">05:00</span>
         </div>
+        <button type="button" class="emergency-modal-close-btn" onclick="closeEmergencyDonorModal()" aria-label="Dismiss Emergency Alert" title="Dismiss Emergency Alert">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       <div class="emergency-modal-body">
@@ -1482,7 +1488,7 @@
           <i class="fa-solid fa-volume-xmark" id="btnMuteEmergencyIcon"></i> <span id="btnMuteEmergencyText">Silence Alarm & Vibration</span>
         </button>
         <button class="btn-emergency-decline" onclick="closeEmergencyDonorModal()">
-          <span>Not Available</span>
+          <i class="fa-solid fa-xmark"></i> <span>Dismiss Alert / Not Available</span>
         </button>
       </div>
     </div>
@@ -1969,6 +1975,9 @@
 
   <!-- Toast Container for Notifications -->
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Warning Alarm Sound Effect ("Warning Alarm Loop 1") -->
+  <audio id="warningAlarmLoop1" src="assets/sounds/warning_alarm_loop_1.wav" loop preload="auto"></audio>
 
   <!-- Real-Time Cross-System Cloud Mesh Engine (Multi-Device Sync via MQTT over WebSockets) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.5.0/mqtt.min.js"></script>

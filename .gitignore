@@ -27,3 +27,5 @@ desktop.ini
 # Temporary files
 *.tmp
 *.bak
+
+.vercel

@@ -334,7 +334,51 @@ function triggerDeviceVibration() {
 }
 
 /**
- * Start Continuous Emergency Alarm Loop (Sound + Vibration + Visual Shake)
+ * Emergency Alarm Sound Effect: "Warning Alarm Loop 1"
+ * Continuously loops audio effect until dismissed by the user.
+ */
+let warningAlarmLoop1Audio = null;
+
+function getWarningAlarmLoop1Audio() {
+  if (!warningAlarmLoop1Audio) {
+    warningAlarmLoop1Audio = document.getElementById('warningAlarmLoop1');
+    if (!warningAlarmLoop1Audio) {
+      warningAlarmLoop1Audio = new Audio('assets/sounds/warning_alarm_loop_1.wav');
+      warningAlarmLoop1Audio.id = 'warningAlarmLoop1';
+      warningAlarmLoop1Audio.loop = true;
+      warningAlarmLoop1Audio.preload = 'auto';
+    }
+  }
+  return warningAlarmLoop1Audio;
+}
+
+function playWarningAlarmLoop1() {
+  if (audioMuted) return;
+  const audio = getWarningAlarmLoop1Audio();
+  if (audio) {
+    audio.loop = true;
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(err => {
+        console.warn('Warning Alarm Loop 1 HTML5 audio auto-play policy:', err);
+      });
+    }
+  }
+  // Layer with synthesized mechanical vibrating siren as guaranteed backup
+  playVibratingEmergencySoundPattern();
+}
+
+function stopWarningAlarmLoop1() {
+  const audio = getWarningAlarmLoop1Audio();
+  if (audio) {
+    audio.pause();
+    try { audio.currentTime = 0; } catch (e) {}
+  }
+}
+
+/**
+ * Start Continuous Emergency Alarm Loop ("Warning Alarm Loop 1" + Vibration + Visual Pulse)
+ * Runs continuously until the user dismisses the emergency alert.
  */
 function startEmergencyAlarmLoop(requestId) {
   isEmergencyAlarmActive = true;
@@ -343,22 +387,30 @@ function startEmergencyAlarmLoop(requestId) {
   const sheet = document.getElementById('emergencyModalSheet');
   if (sheet) sheet.classList.add('vibrating');
 
+  // Show live banner alarm dismiss button if active on emergency screen
+  const dismissBtn = document.getElementById('btnDismissLiveAlarm');
+  if (dismissBtn) dismissBtn.style.display = 'inline-flex';
+
   // Update mute button label
   const btnMuteText = document.getElementById('btnMuteEmergencyText');
   const btnMuteIcon = document.getElementById('btnMuteEmergencyIcon');
-  if (btnMuteText) btnMuteText.textContent = audioMuted ? 'Unmute Alarm Sound' : 'Silence Alarm & Vibration';
+  if (btnMuteText) btnMuteText.textContent = audioMuted ? 'Unmute "Warning Alarm Loop 1"' : 'Silence Alarm & Vibration';
   if (btnMuteIcon) btnMuteIcon.className = audioMuted ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
 
-  // Play immediately
-  playVibratingEmergencySoundPattern();
+  // Play "Warning Alarm Loop 1" immediately
+  playWarningAlarmLoop1();
   triggerDeviceVibration();
 
-  // Loop every 2.4 seconds while active
+  // Continuously loop every 2.4 seconds while active until user dismisses
   if (emergencyAlarmInterval) clearInterval(emergencyAlarmInterval);
   emergencyAlarmInterval = setInterval(() => {
     if (!isEmergencyAlarmActive) {
       clearInterval(emergencyAlarmInterval);
       return;
+    }
+    const audio = getWarningAlarmLoop1Audio();
+    if (audio && audio.paused && !audioMuted) {
+      audio.play().catch(() => {});
     }
     playVibratingEmergencySoundPattern();
     triggerDeviceVibration();
@@ -366,7 +418,7 @@ function startEmergencyAlarmLoop(requestId) {
 }
 
 /**
- * Stop Emergency Alarm Loop
+ * Stop Emergency Alarm Loop (Triggered upon dismissing the emergency alert)
  */
 function stopEmergencyAlarmLoop() {
   isEmergencyAlarmActive = false;
@@ -374,6 +426,11 @@ function stopEmergencyAlarmLoop() {
     clearInterval(emergencyAlarmInterval);
     emergencyAlarmInterval = null;
   }
+  stopWarningAlarmLoop1();
+
+  const dismissBtn = document.getElementById('btnDismissLiveAlarm');
+  if (dismissBtn) dismissBtn.style.display = 'none';
+
   const sheet = document.getElementById('emergencyModalSheet');
   if (sheet) sheet.classList.remove('vibrating');
 
@@ -389,33 +446,34 @@ function toggleMuteActiveEmergencyAlarm() {
   audioMuted = !audioMuted;
   const btnMuteText = document.getElementById('btnMuteEmergencyText');
   const btnMuteIcon = document.getElementById('btnMuteEmergencyIcon');
-  if (btnMuteText) btnMuteText.textContent = audioMuted ? 'Unmute Alarm Sound' : 'Silence Alarm & Vibration';
+  if (btnMuteText) btnMuteText.textContent = audioMuted ? 'Unmute "Warning Alarm Loop 1"' : 'Silence Alarm & Vibration';
   if (btnMuteIcon) btnMuteIcon.className = audioMuted ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
 
   if (audioMuted) {
+    stopWarningAlarmLoop1();
     if ('vibrate' in navigator) {
       try { navigator.vibrate(0); } catch (e) {}
     }
-    showToast('Alarm sound silenced. Emergency details remain on screen.', 'info');
+    showToast('"Warning Alarm Loop 1" silenced. Emergency details remain on screen.', 'info');
   } else {
-    playVibratingEmergencySoundPattern();
+    playWarningAlarmLoop1();
     triggerDeviceVibration();
-    showToast('Emergency alarm sound resumed.', 'emergency');
+    showToast('"Warning Alarm Loop 1" resumed.', 'emergency');
   }
 }
 
 /**
- * Test Button for Emergency Vibrating Sound & Device Vibration
+ * Test Button for "Warning Alarm Loop 1"
  */
 function testEmergencyAlertSound() {
   ensureAudioContext();
   const wasMuted = audioMuted;
   audioMuted = false;
 
-  playVibratingEmergencySoundPattern();
+  playWarningAlarmLoop1();
   triggerDeviceVibration();
 
-  showToast('🔊 Vibrating buzzer emergency alarm test triggered! (Audio + Device Vibration active)', 'emergency');
+  showToast('🔊 "Warning Alarm Loop 1" sound effect active! (Continuous loop test)', 'emergency');
 
   // Briefly shake the donor availability card as feedback
   const card = document.getElementById('donorAvailabilityCard');
@@ -424,9 +482,13 @@ function testEmergencyAlertSound() {
     setTimeout(() => card.classList.remove('pulse-border'), 1800);
   }
 
+  // If not currently in a real emergency, pause test after 4.8 seconds
   setTimeout(() => {
-    audioMuted = wasMuted;
-  }, 2000);
+    if (!isEmergencyAlarmActive) {
+      stopWarningAlarmLoop1();
+      audioMuted = wasMuted;
+    }
+  }, 4800);
 }
 
 function toggleAudioChime() {
@@ -971,6 +1033,10 @@ function navigateToScreen(screenId, recordHistory = true) {
   if (!nextScreen) {
     console.error('Target screen element not found:', screenId);
     return;
+  }
+
+  if (currentScreenId === 'screen-emergency-live' && screenId !== 'screen-emergency-live') {
+    stopEmergencyAlarmLoop();
   }
 
   if (recordHistory && currentScreenId) {
@@ -1803,10 +1869,10 @@ async function executeSendEmergencyRequest() {
     notification: notif
   });
 
-  // Play audio chime
-  playHospitalChime();
+  // Trigger continuous "Warning Alarm Loop 1" sound effect until dismissed
+  startEmergencyAlarmLoop(newReq.id);
 
-  showToast(`Emergency alert broadcasted to ${Math.max(matchingDonors.length, 3)} nearby compatible donors!`, 'success');
+  showToast(`🚨 Emergency alert broadcasted to compatible donors! Warning Alarm Loop 1 active.`, 'emergency');
 
   // Navigate to Emergency Live Screen
   navigateToEmergencyLive(newReq.id);
@@ -2005,6 +2071,7 @@ async function simulateNearbyDonorAcceptance() {
  */
 async function confirmCancelRequest() {
   if (confirm('Are you sure you want to cancel this emergency request?')) {
+    stopEmergencyAlarmLoop();
     if (activeLiveReqId) {
       const req = appState.requests.find(r => r.id === activeLiveReqId);
       if (req) req.status = 'cancelled';

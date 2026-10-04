@@ -5062,3 +5062,57 @@ input:checked + .slider:before {
     border-radius: var(--radius-md);
   }
 }
+
+/* ==============================================================================
+   Emergency Alert Modal Dismiss & Alarm Controls ("Warning Alarm Loop 1")
+   ============================================================================== */
+.emergency-modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.12);
+  border: 1.5px solid rgba(220, 38, 38, 0.25);
+  color: var(--primary, #dc2626);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.2s ease);
+  z-index: 10;
+}
+
+.emergency-modal-close-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.btn-dismiss-alarm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all var(--transition-fast, 0.2s ease);
+}
+
+.btn-dismiss-alarm:hover {
+  background: #ffffff;
+  color: #dc2626;
+  transform: scale(1.05);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
