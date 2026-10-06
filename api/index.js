@@ -116,14 +116,28 @@ module.exports = async (req, res) => {
     return res.end();
   }
 
-  // Support both direct URL invocation and Vercel rewritten URLs
-  let rawUrl = req.headers['x-matched-path'] || req.headers['x-forwarded-url'] || req.headers['x-original-url'] || req.url || '/';
-  let url = rawUrl.split('?')[0];
+  // Support direct URL invocation, Vercel catch-all [...path], and Vercel rewrites
+  let url = (req.url || '/').split('?')[0];
 
-  // If Vercel rewrote to /api or /api/index.js, extract the sub-route from query parameter
+  // If invoked via Vercel dynamic catch-all route api/[...path].js
+  if (req.query && req.query.path) {
+    const pathParts = Array.isArray(req.query.path) ? req.query.path.join('/') : req.query.path;
+    url = '/api/' + (pathParts.startsWith('/') ? pathParts.slice(1) : pathParts);
+  } else if (req.headers && req.headers['x-forwarded-url']) {
+    url = req.headers['x-forwarded-url'].split('?')[0];
+  } else if (req.headers && req.headers['x-original-url']) {
+    url = req.headers['x-original-url'].split('?')[0];
+  } else if (req.headers && req.headers['x-matched-path']) {
+    const matched = req.headers['x-matched-path'].split('?')[0];
+    if (matched && matched !== '/api' && matched !== '/api/') {
+      url = matched;
+    }
+  }
+
+  // If Vercel rewrote to /api, extract sub-route from query parameter if present
   if (url === '/api' || url === '/api/' || url === '/api/index.js' || url === '/index.js') {
     const q = req.query || {};
-    let sub = q.__route;
+    let sub = q.__route || q.route;
     if (!sub && req.url && req.url.includes('__route=')) {
       try {
         const parsed = new URL(req.url, 'http://localhost');
@@ -141,6 +155,15 @@ module.exports = async (req, res) => {
   }
 
   const db = loadDB();
+
+  // Root API ping/health route
+  if ((url === '/api' || url === '/api/index') && req.method === 'GET') {
+    return sendJson(res, 200, {
+      status: 'online',
+      service: 'BloodConnect Emergency Network API',
+      version: '2.0.0'
+    });
+  }
 
   // Route: GET /api/events (SSE stream connection compatibility)
   if (url === '/api/events' && req.method === 'GET') {

@@ -1303,18 +1303,39 @@ function validateSignupPasswords() {
 /**
  * Real-time Validation for Signup Age (18+ Requirement)
  */
-function validateSignupAge() {
+function validateSignupAge(isBlur = false) {
   const ageInput = document.getElementById('signupAge');
   const hint = document.getElementById('signupAgeHint');
   if (!ageInput) return;
-  const val = parseInt(ageInput.value, 10);
-  if (!ageInput.value || isNaN(val)) {
+  const raw = (ageInput.value || '').trim();
+  if (!raw) {
     if (hint) {
       hint.style.color = 'var(--text-muted)';
-      hint.textContent = 'Only users 18 and older are eligible to access.';
+      hint.textContent = 'Only individuals 18+ are eligible to access.';
     }
+    ageInput.style.borderColor = '';
     return;
   }
+  const val = parseInt(raw, 10);
+  if (isNaN(val)) {
+    if (hint) {
+      hint.style.color = '#dc2626';
+      hint.textContent = 'Please enter a valid numeric age.';
+    }
+    ageInput.style.borderColor = '#dc2626';
+    return;
+  }
+
+  // Prevent premature error while user is actively typing first digit (e.g., '2' aiming for '20')
+  if (!isBlur && raw.length === 1 && val < 18) {
+    if (hint) {
+      hint.style.color = 'var(--text-muted)';
+      hint.textContent = 'Enter your age (minimum 18 years required).';
+    }
+    ageInput.style.borderColor = '';
+    return;
+  }
+
   if (val < 18) {
     if (hint) {
       hint.style.color = '#dc2626';
@@ -1330,9 +1351,9 @@ function validateSignupAge() {
   } else {
     if (hint) {
       hint.style.color = '#16a34a';
-      hint.textContent = '✓ Age verified (18+ eligible for access).';
+      hint.textContent = `✓ Age verified (${val} years old — eligible for access).`;
     }
-    ageInput.style.borderColor = '';
+    ageInput.style.borderColor = '#16a34a';
   }
 }
 
@@ -1586,8 +1607,15 @@ async function handleSignupSubmit(event) {
       }
     } else {
       const errData = await res.json().catch(() => ({}));
-      showToast(errData.message || 'Registration rejected: You must be at least 18 years old to access.', 'emergency');
-      return;
+      if (res.status === 400 && errData.message && errData.message.includes('18')) {
+        showToast(errData.message, 'emergency');
+        return;
+      }
+      if (errData.message) {
+        showToast(errData.message, 'emergency');
+        return;
+      }
+      console.warn('Backend register status:', res.status, '- continuing with local state registration.');
     }
   } catch (e) {
     console.warn('Backend register fallback to local state:', e);

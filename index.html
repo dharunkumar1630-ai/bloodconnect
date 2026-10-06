@@ -274,11 +274,8 @@
               <div class="form-row-2col">
                 <div class="form-group">
                   <label class="form-label" for="signupAge">Age (18+ only) <span class="text-danger">*</span></label>
-                  <div class="input-with-icon">
-                    <i class="fa-solid fa-calendar-days input-icon"></i>
-                    <input type="number" id="signupAge" class="form-input" placeholder="Age (min 18)" min="18" max="75" required oninput="validateSignupAge()">
-                  </div>
-                  <small class="form-hint" id="signupAgeHint" style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; display: block;">Only users 18 and older are eligible to access.</small>
+                  <input type="number" id="signupAge" class="form-input age-manual-input" placeholder="e.g. 20" min="18" max="75" inputmode="numeric" required oninput="validateSignupAge()" onblur="validateSignupAge(true)">
+                  <small class="form-hint" id="signupAgeHint" style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; display: block;">Only individuals 18+ are eligible to access.</small>
                 </div>
 
                 <div class="form-group">
